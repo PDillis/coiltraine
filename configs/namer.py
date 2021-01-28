@@ -51,7 +51,7 @@ def generate_name(g_conf):
     # Add model type
     final_name_string += '_' + g_conf.MODEL_TYPE
     # Add the model size
-    #TODO: for now is just saying the number of convs, add a layer counting
+    # TODO: for now is just saying the number of convs, add a layer counting
     if 'conv' in g_conf.MODEL_CONFIGURATION['perception']:
         final_name_string += '_' + str(len(g_conf.MODEL_CONFIGURATION['perception']['conv']['kernels'])) + 'conv'
     else:  # For now, it is a Resnet model

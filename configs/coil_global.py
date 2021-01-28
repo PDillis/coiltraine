@@ -4,15 +4,15 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from ast import literal_eval
-from coilutils import AttributeDict
+from coilutils import AttributeDict, _merge_a_into_b
 import copy
 import numpy as np
 import os
+import sys
 import yaml
 
 from configs.namer import generate_name
 from logger.coil_logger import create_log, add_message
-
 
 
 _g_conf = AttributeDict()
@@ -21,7 +21,7 @@ _g_conf.immutable(False)
 """#### GENERAL CONFIGURATION PARAMETERS ####"""
 _g_conf.NUMBER_OF_LOADING_WORKERS = 12
 _g_conf.FINISH_ON_VALIDATION_STALE = None
-
+_g_conf.EXPERIENCE_FILE = None
 
 """#### INPUT RELATED CONFIGURATION PARAMETERS ####"""
 _g_conf.SENSORS = {'rgb': (3, 88, 200)}
@@ -52,11 +52,11 @@ _g_conf.EXPERIMENT_GENERATED_NAME = None
 # TODO: not necessarily the configuration need to know about this
 _g_conf.PROCESS_NAME = "None"
 _g_conf.NUMBER_ITERATIONS = 20000
-_g_conf.SAVE_SCHEDULE = range(0, 2000, 200)
+_g_conf.SAVE_SCHEDULE = 'range(0, 2000, 200)'
 _g_conf.NUMBER_FRAMES_FUSION = 1
 _g_conf.NUMBER_IMAGES_SEQUENCE = 1
 _g_conf.SEQUENCE_STRIDE = 1
-_g_conf.TEST_SCHEDULE = range(0, 2000, 200)
+_g_conf.TEST_SCHEDULE = 'range(0, 2000, 200)'
 _g_conf.SPEED_FACTOR = 12.0
 _g_conf.AUGMENT_LATERAL_STEERINGS = 6
 _g_conf.NUMBER_OF_HOURS = 1
@@ -71,7 +71,6 @@ _g_conf.PRELOAD_MODEL_CHECKPOINT = None
 
 
 _g_conf.MODEL_TYPE = 'coil_icra'
-_g_conf.MODEL_CONFIGURATION = {}
 _g_conf.PRE_TRAINED = False
 _g_conf.MAGICAL_SEED = 42
 
@@ -102,9 +101,11 @@ def merge_with_yaml(yaml_filename):
         yaml_file = yaml.load(f)
 
         yaml_cfg = AttributeDict(yaml_file)
-
-
+    print('yaml_cfg: \n', yaml_cfg)
+    print('g_conf: \n', _g_conf)
     _merge_a_into_b(yaml_cfg, _g_conf)
+    print('g_conf: \n', _g_conf)
+    sys.exit(1)
 
     path_parts = os.path.split(yaml_filename)
     _g_conf.EXPERIMENT_BATCH_NAME = os.path.split(path_parts[-2])[-1]
@@ -184,96 +185,6 @@ def set_type_of_process(process_type, param=None):
                             'FullConfiguration': _g_conf.TRAIN_DATASET_NAME + 'dict'})
 
     _g_conf.immutable(True)
-
-
-def _merge_a_into_b(a, b, stack=None):
-    """Merge config dictionary a into config dictionary b, clobbering the
-    options in b whenever they are also specified in a.
-    """
-
-    assert isinstance(a, AttributeDict) or isinstance(a, dict), 'Argument `a` must be an AttrDict'
-    assert isinstance(b, AttributeDict) or isinstance(a, dict), 'Argument `b` must be an AttrDict'
-
-    for k, v_ in a.items():
-        full_key = '.'.join(stack) + '.' + k if stack is not None else k
-        # a must specify keys that are in b
-        if k not in b:
-            # if is it more than second stack
-            if stack is not None:
-                b[k] = v_
-            else:
-                raise KeyError('Non-existent config key: {}'.format(full_key))
-
-        v = copy.deepcopy(v_)
-        v = _decode_cfg_value(v)
-
-        v = _check_and_coerce_cfg_value_type(v, b[k], k, full_key)
-
-        # Recursively merge dicts
-
-        b[k] = v
-
-
-def _decode_cfg_value(v):
-    """Decodes a raw config value (e.g., from a yaml config files or command
-    line argument) into a Python object.
-    """
-    # Configs parsed from raw yaml will contain dictionary keys that need to be
-    # converted to AttrDict objects
-
-
-    # All remaining processing is only applied to strings
-    if not isinstance(v, str):
-        return v
-    # Try to interpret `v` as a:
-    #   string, number, tuple, list, dict, boolean, or None
-    try:
-        v = literal_eval(v)
-    # The following two excepts allow v to pass through when it represents a
-    # string.
-    #
-
-    except ValueError:
-        pass
-    except SyntaxError:
-        pass
-    return v
-
-
-def _check_and_coerce_cfg_value_type(value_a, value_b, key, full_key):
-    """Checks that `value_a`, which is intended to replace `value_b` is of the
-    right type. The type is correct if it matches exactly or is one of a few
-    cases in which the type can be easily coerced.
-    """
-    # The types must match (with some exceptions)
-    type_b = type(value_b)
-    type_a = type(value_a)
-    if type_a is type_b:
-        return value_a
-
-    # Exceptions: numpy arrays, strings, tuple<->list
-    if isinstance(value_b, type(None)):
-        value_a = value_a
-    elif isinstance(value_b, np.ndarray):
-        value_a = np.array(value_a, dtype=value_b.dtype)
-    elif isinstance(value_b, str):
-        value_a = str(value_a)
-    elif isinstance(value_a, tuple) and isinstance(value_b, list):
-        value_a = list(value_a)
-    elif isinstance(value_a, list) and isinstance(value_b, tuple):
-        value_a = tuple(value_a)
-    elif isinstance(value_b, range) and not isinstance(value_a, list):
-        value_a = eval(value_a)
-    elif isinstance(value_b, range) and isinstance(value_a, list):
-        value_a = list(value_a)
-    elif isinstance(value_b, dict):
-        value_a = eval(value_a)
-    else:
-        raise ValueError(
-            'Type mismatch ({} vs. {}) with values ({} vs. {}) for config '
-            'key: {}'.format(type_b, type_a, value_b, value_a, full_key)
-        )
-    return value_a
 
 
 g_conf = _g_conf
