@@ -23,6 +23,13 @@ from configs import g_conf
 from coilutils.general import sort_nicely
 
 
+def join_classes(labels_image, classes_join):
+    compressed_labels_image = np.copy(labels_image)
+    for key, value in classes_join.items():
+        compressed_labels_image[np.where(labels_image == int(key))] = value
+
+    return compressed_labels_image
+
 
 def parse_remove_configuration(configuration):
     """
@@ -66,19 +73,19 @@ class CoILDataset(Dataset):
             self._remove_params = []
             self.preload_name = preload_name
 
-        print("preload Name ", self.preload_name)
-
-        if self.preload_name is not None and os.path.exists(
-                os.path.join('_preloads', self.preload_name + '.npy')):
-            print(" Loading from NPY ")
-            self.sensor_data_names, self.measurements = np.load(
-                os.path.join('_preloads', self.preload_name + '.npy'))
-            print(self.sensor_data_names)
+        print("Preload Name ", self.preload_name)
+        preload_path = os.path.join('_preloads', f'{self.preload_name}.npy')
+        if self.preload_name is not None and os.path.exists(preload_path):
+            print(f"Loading from NPY: {preload_path}")
+            self.sensor_data_names, self.measurements = np.load(preload_path, allow_pickle=True)
+            for key in self.sensor_data_names.keys():
+                print(f'\t======> {key} images: {len(self.sensor_data_names[key])}')
+            print(f'\t======> measurements: {len(self.measurements)}')
         else:
             self.sensor_data_names, self.measurements = self._pre_load_image_folders(root_dir)
-
-
-        print("preload Name ", self.preload_name)
+            for key in self.sensor_data_names.keys():
+                print(f'\t======> {key} images: {len(self.sensor_data_names[key])}')
+            print(f'\t======> measurements: {len(self.measurements)}')
 
         self.transform = transform
         self.batch_read_number = 0
@@ -98,32 +105,54 @@ class CoILDataset(Dataset):
 
         """
         try:
-            img_path = os.path.join(self.root_dir,
-                                    self.sensor_data_names[index].split('/')[-2],
-                                    self.sensor_data_names[index].split('/')[-1])
-
-            img = cv2.imread(img_path, cv2.IMREAD_COLOR)
-            # Apply the image transformation
-            if self.transform is not None:
-                boost = 1
-                img = self.transform(self.batch_read_number * boost, img)
-            else:
-                img = img.transpose(2, 0, 1)
-
-            img = img.astype(np.float)
-            img = torch.from_numpy(img).type(torch.FloatTensor)
-            img = img / 255.
-
             measurements = self.measurements[index].copy()
-            for k, v in measurements.items():
-                v = torch.from_numpy(np.asarray([v, ]))
-                measurements[k] = v.float()
+            for key, value in measurements.items():
+                try:
+                    value = torch.from_numpy(np.asarray([value, ]))
+                    measurements[key] = value.float()
+                except:
+                    pass
 
-            measurements['rgb'] = img
+            for sensor_name in self.sensor_data_names.keys():
+                img_path = os.path.join(self.root_dir,
+                                        self.sensor_data_names[index].split('/')[-2],
+                                        self.sensor_data_names[index].split('/')[-1])
+                img = cv2.imread(img_path, cv2.IMREAD_COLOR)
+                if sensor_name == 'rgb':
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # [B, G, R] => [R, G, B]
+                    # Apply the image transformation
+                    if self.transform is not None:
+                        boost = 1
+                        img = self.transform(self.batch_read_number * boost, img)
+                    else:
+                        img = img.transpose(2, 0, 1)
+
+                    img = img.astype(np.float)
+                    img = torch.from_numpy(img).type(torch.FloatTensor)
+                    img = img / 255.
+
+                elif sensor_name == 'labels':
+                    if self.transform is not None:
+                        boost = 1
+                        img = self.transform(self.batch_read_number * boost, img)
+                    else:
+                        img = img.transpose(2, 0, 1)
+
+                    img = img[2, :, :]
+                    if g_conf.LABELS_CLASSES != 13:
+                        img = join_classes(img, g_conf.JOIN_CLASSES)
+
+                    img = img.astype(np.float)
+                    img = torch.from_numpy(img).type(torch.FloatTensor)
+                    img = img / (g_conf.LABELS_CLASSES - 1)
+
+                measurements[sensor_name] = img
 
             self.batch_read_number += 1
+
         except AttributeError:
-            print ("Blank IMAGE")
+            traceback.print_exc()
+            print("Blank image")
 
             measurements = self.measurements[0].copy()
             for k, v in measurements.items():
@@ -132,13 +161,13 @@ class CoILDataset(Dataset):
             measurements['steer'] = 0.0
             measurements['throttle'] = 0.0
             measurements['brake'] = 0.0
-            measurements['rgb'] = np.zeros(3, 88, 200)
+            measurements['rgb'] = np.zeros(3, 88, 200)  # TODO: This is hardcoded, should be able to read the image size
 
         return measurements
 
-    def is_measurement_partof_experiment(self, measurement_data):
+    def is_measurement_part_of_experiment(self, measurement_data):
 
-        # If the measurement data is not removable is because it is part of this experiment dataa
+        # If the measurement data is not removable it's because it's part of this experiment dataa
         return not self._check_remove_function(measurement_data, self._remove_params)
 
     def _get_final_measurement(self, speed, measurement_data, angle,
@@ -192,8 +221,7 @@ class CoILDataset(Dataset):
             of dictionaries.
 
         """
-
-        episodes_list = glob.glob(os.path.join(path, 'episode_*'))
+        episodes_list = glob.glob(os.path.join(path, '*route*'))  # TODO: now episode_* is Container_*
         sort_nicely(episodes_list)
         # Do a check if the episodes list is empty
         if len(episodes_list) == 0:
@@ -206,17 +234,14 @@ class CoILDataset(Dataset):
 
         # Now we do a check to try to find all the
         for episode in episodes_list:
-
             print('Episode ', episode)
-
             available_measurements_dict = data_parser.check_available_measurements(episode)
-
             if number_of_hours_pre_loaded > g_conf.NUMBER_OF_HOURS:
                 # The number of wanted hours achieved
                 break
 
             # Get all the measurements from this episode
-            measurements_list = glob.glob(os.path.join(episode, 'measurement*'))
+            measurements_list = glob.glob(os.path.join(episode, '**/measurements*'), recursive=True)  # TODO: can_bus*
             sort_nicely(measurements_list)
 
             if len(measurements_list) == 0:
@@ -244,7 +269,7 @@ class CoILDataset(Dataset):
                                                                 directions,
                                                                 available_measurements_dict)
 
-                if self.is_measurement_partof_experiment(final_measurement):
+                if self.is_measurement_part_of_experiment(final_measurement):
                     float_dicts.append(final_measurement)
                     rgb = 'CentralRGB_' + data_point_number + '.png'
                     sensor_data_names.append(os.path.join(episode.split('/')[-1], rgb))
@@ -259,7 +284,7 @@ class CoILDataset(Dataset):
                                                                 directions,
                                                                 available_measurements_dict)
 
-                if self.is_measurement_partof_experiment(final_measurement):
+                if self.is_measurement_part_of_experiment(final_measurement):
                     float_dicts.append(final_measurement)
                     rgb = 'LeftRGB_' + data_point_number + '.png'
                     sensor_data_names.append(os.path.join(episode.split('/')[-1], rgb))
@@ -271,7 +296,7 @@ class CoILDataset(Dataset):
                                                                 directions,
                                                                 available_measurements_dict)
 
-                if self.is_measurement_partof_experiment(final_measurement):
+                if self.is_measurement_part_of_experiment(final_measurement):
                     float_dicts.append(final_measurement)
                     rgb = 'RightRGB_' + data_point_number + '.png'
                     sensor_data_names.append(os.path.join(episode.split('/')[-1], rgb))
@@ -293,7 +318,8 @@ class CoILDataset(Dataset):
 
         return sensor_data_names, float_dicts
 
-    def augment_directions(self, directions):
+    @staticmethod
+    def augment_directions(directions):
 
         if directions == 2.0:
             if random.randint(0, 100) < 20:
@@ -301,7 +327,8 @@ class CoILDataset(Dataset):
 
         return directions
 
-    def augment_steering(self, camera_angle, steer, speed):
+    @staticmethod
+    def augment_steering(camera_angle, steer, speed):
         """
             Apply the steering physical equation to augment for the lateral cameras steering
         Args:
@@ -344,17 +371,17 @@ class CoILDataset(Dataset):
     def controls_position(self):
         return np.where(self.meta_data[:, 0] == b'control')[0][0]
 
-
     """
         Methods to interact with the dataset attributes that are used for training.
     """
 
-    def extract_targets(self, data):
+    @staticmethod
+    def extract_targets(data):
         """
         Method used to get to know which positions from the dataset are the targets
         for this experiments
         Args:
-            labels: the set of all float data got from the dataset
+            data: the set of all float data got from the dataset
 
         Returns:
             the float data that is actually targets
@@ -368,12 +395,13 @@ class CoILDataset(Dataset):
 
         return torch.cat(targets_vec, 1)
 
-    def extract_inputs(self, data):
+    @staticmethod
+    def extract_inputs(data):
         """
         Method used to get to know which positions from the dataset are the inputs
         for this experiments
         Args:
-            labels: the set of all float data got from the dataset
+            data: the set of all float data got from the dataset
 
         Returns:
             the float data that is actually targets
@@ -383,16 +411,20 @@ class CoILDataset(Dataset):
         """
         inputs_vec = []
         for input_name in g_conf.INPUTS:
-            inputs_vec.append(data[input_name])
+            if len(data[input_name].size()) > 2:
+                inputs_vec.append(torch.squeeze(data[input_name]))
+            else:
+                inputs_vec.append(data[input_name])
 
         return torch.cat(inputs_vec, 1)
 
-    def extract_intentions(self, data):
+    @staticmethod
+    def extract_intentions(data):
         """
         Method used to get to know which positions from the dataset are the inputs
         for this experiments
         Args:
-            labels: the set of all float data got from the dataset
+            data: the set of all float data got from the dataset
 
         Returns:
             the float data that is actually targets

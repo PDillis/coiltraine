@@ -19,7 +19,7 @@ from carla08.driving_benchmark import run_driving_benchmark
 from drive import CoILAgent
 from logger import coil_logger
 from configs import g_conf, merge_with_yaml, set_type_of_process
-from coilutils.checkpoint_schedule import  maximun_checkpoint_reach, get_next_checkpoint,\
+from coilutils.checkpoint_schedule import maximun_checkpoint_reach, get_next_checkpoint,\
     is_next_checkpoint_ready, get_latest_evaluated_checkpoint, validation_stale_point
 from coilutils.general import compute_average_std_separatetasks, get_latest_path, write_header_control_summary,\
      write_data_point_control_summary, camelcase_to_snakecase, unique
@@ -47,12 +47,11 @@ def start_carla_simulator(gpu, town_name, docker):
 
     port = find_free_port()
 
-    sp = subprocess.Popen(['docker', 'run', '--rm', '-d', '-p',
-                           str(port)+'-'+str(port+2)+':'+str(port)+'-'+str(port+2),
-                           '--runtime=nvidia', '-e', 'NVIDIA_VISIBLE_DEVICES='+str(gpu), docker,
-                           '/bin/bash', 'CarlaUE4.sh', '/Game/Maps/' + town_name, '-windowed',
-                           '-benchmark', '-fps=10', '-world-port=' + str(port)], shell=False,
-                           stdout=subprocess.PIPE)
+    sp = subprocess.Popen(
+        ['docker', 'run', '--rm', '-d', '-p', f'{port}-{port+2}:{port}-{port+2}', '--runtime=nvidia', '-e',
+         f'NVIDIA_VISIBLE_DEVICES={gpu}', docker, '/bin/bash', 'CarlaUE4.sh', f'/Game/Maps/{town_name}', '-windowed',
+         '-benchmark', '-fps=10', f'-world-port={port}'],
+        shell=False, stdout=subprocess.PIPE)
     (out, err) = sp.communicate()
 
     print("Going to communicate")
@@ -92,7 +91,7 @@ def driving_benchmark(checkpoint_number, gpu, town_name, experiment_set, exp_bat
                                              , 'checkpoints', str(checkpoint_number) + '.pth'))
 
         coil_agent = CoILAgent(checkpoint, town_name)
-        print ("Checkpoint ", checkpoint_number)
+        print("Checkpoint ", checkpoint_number)
         coil_logger.add_message('Iterating', {"Checkpoint": checkpoint_number}, checkpoint_number)
 
         """ MAIN PART, RUN THE DRIVING BENCHMARK """
@@ -130,7 +129,6 @@ def driving_benchmark(checkpoint_number, gpu, town_name, experiment_set, exp_bat
         carla_process.kill()
         """ KILL CARLA, FINISHED THIS BENCHMARK"""
         subprocess.call(['docker', 'stop', out[:-1]])
-
 
     except TCPConnectionError as error:
         logging.error(error)
@@ -268,6 +266,3 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
     except:
         traceback.print_exc()
         coil_logger.add_message('Error', {'Message': 'Something happened'})
-
-
-

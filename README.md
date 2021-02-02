@@ -33,7 +33,7 @@ The [COiLTRAiNE](docs/coiltraine.md) framework allows simultaneous [training](do
 
   * Hardware: A computer with a dedicated GPU capable of running Unreal Engine. NVIDIA 1070 or
   better is recommended.
-  * OS: Ubuntu also compatible with CARLA (16.04)
+  * OS: Ubuntu also compatible with CARLA (18.04)
 
 
 #### Installation

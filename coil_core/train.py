@@ -40,19 +40,15 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
         merge_with_yaml(os.path.join('configs', exp_batch, exp_alias + '.yaml'))
         set_type_of_process('train')
         # Set the process into loading status.
-        coil_logger.add_message('Loading', {'GPU': gpu})
+        coil_logger.add_message('Loading', {'GPU': os.environ['CUDA_VISIBLE_DEVICES']})
 
         # Put the output to a separate file if it is the case
-
         if suppress_output:
             if not os.path.exists('_output_logs'):
                 os.mkdir('_output_logs')
-            sys.stdout = open(os.path.join('_output_logs', exp_alias + '_' +
-                              g_conf.PROCESS_NAME + '_' + str(os.getpid()) + ".out"), "a",
-                              buffering=1)
-            sys.stderr = open(os.path.join('_output_logs',
-                              exp_alias + '_err_'+g_conf.PROCESS_NAME + '_'
-                                           + str(os.getpid()) + ".out"),
+            sys.stdout = open(os.path.join('_output_logs', f'{exp_alias}_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
+                              "a", buffering=1)
+            sys.stderr = open(os.path.join('_output_logs', f'{exp_alias}_err_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
                               "a", buffering=1)
 
         if coil_logger.check_finish('train'):
@@ -61,22 +57,25 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
 
         # Preload option
         if g_conf.PRELOAD_MODEL_ALIAS is not None:
-            checkpoint = torch.load(os.path.join('_logs', g_conf.PRELOAD_MODEL_BATCH,
-                                                  g_conf.PRELOAD_MODEL_ALIAS,
+            checkpoint = torch.load(os.path.join('_logs',
+                                                 g_conf.PRELOAD_MODEL_BATCH,
+                                                 g_conf.PRELOAD_MODEL_ALIAS,
                                                  'checkpoints',
-                                                 str(g_conf.PRELOAD_MODEL_CHECKPOINT)+'.pth'))
+                                                 f'{g_conf.PRELOAD_MODEL_CHECKPOINT}.pth'))
 
 
         # Get the latest checkpoint to be loaded
         # returns none if there are no checkpoints saved for this model
         checkpoint_file = get_latest_saved_checkpoint()
         if checkpoint_file is not None:
+            print('Starting from previous best checkpoint...')
             checkpoint = torch.load(os.path.join('_logs', exp_batch, exp_alias,
-                                    'checkpoints', str(get_latest_saved_checkpoint())))
+                                                 'checkpoints', str(get_latest_saved_checkpoint())))
             iteration = checkpoint['iteration']
             best_loss = checkpoint['best_loss']
             best_loss_iter = checkpoint['best_loss_iter']
         else:
+            print('Starting from scratch...')
             iteration = 0
             best_loss = 10000.0
             best_loss_iter = 0
@@ -92,10 +91,10 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
 
         # Instantiate the class used to read a dataset. The coil dataset generator
         # can be found
-        dataset = CoILDataset(full_dataset, transform=augmenter,
-                              preload_name=str(g_conf.NUMBER_OF_HOURS)
-                                               + 'hours_' + g_conf.TRAIN_DATASET_NAME)
-        print ("Loaded dataset")
+        dataset = CoILDataset(full_dataset,
+                              transform=augmenter,
+                              preload_name=f'{g_conf.NUMBER_OF_HOURS}hours_{g_conf.TRAIN_DATASET_NAME}')
+        print("Loaded dataset")
 
         data_loader = select_balancing_strategy(dataset, iteration, number_of_workers)
         model = CoILModel(g_conf.MODEL_TYPE, g_conf.MODEL_CONFIGURATION)
@@ -111,8 +110,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
             accumulated_time = 0
             loss_window = []
 
-        print ("Before the loss")
-
+        print(f"Setting the loss ({g_conf.LOSS_FUNCTION})")
         criterion = Loss(g_conf.LOSS_FUNCTION)
 
         # Loss time series window
@@ -206,7 +204,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
                                     iteration)
             loss_window.append(loss.data.tolist())
             coil_logger.write_on_error_csv('train', loss.data)
-            print("Iteration: %d  Loss: %f" % (iteration, loss.data))
+            print(f"Iteration: {iteration}  Loss: {loss.data}")
 
         coil_logger.add_message('Finished', {})
 

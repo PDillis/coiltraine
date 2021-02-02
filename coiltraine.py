@@ -11,8 +11,10 @@ if __name__ == '__main__':
 
     argparser.add_argument(
         '--single-process',
-        default=None,
-        type=str
+        help='Choose between training your model (train), validating (validation), or drive (drive).',
+        default='train',
+        type=str,
+        required=True
     )
     argparser.add_argument(
         '--gpus',
@@ -127,13 +129,6 @@ if __name__ == '__main__':
     if args.restart_validations:
         erase_validations(args.folder, list(args.validation_datasets))
 
-    # The definition of parameters for driving
-    drive_params = {
-        "suppress_output": True,
-        "no_screen": args.no_screen,
-        "docker": args.docker,
-        "record_collisions": args.record_collisions
-    }
     # There are two modes of execution
     if args.single_process is not None:
         ####
@@ -146,15 +141,21 @@ if __name__ == '__main__':
         create_exp_path(args.folder, args.exp)
 
         if args.single_process == 'train':
-            execute_train(gpu="0", exp_batch=args.folder, exp_alias=args.exp,
-                          suppress_output=False, number_of_workers= args.number_of_workers)
+            execute_train(gpu=args.gpus[0], exp_batch=args.folder, exp_alias=args.exp,
+                          suppress_output=False, number_of_workers=args.number_of_workers)
 
         elif args.single_process == 'validation':
-            execute_validation(gpu="0", exp_batch=args.folder, exp_alias=args.exp,
+            execute_validation(gpu=args.gpus[0], exp_batch=args.folder, exp_alias=args.exp,
                                dataset=args.validation_datasets[0], suppress_output=False)
 
         elif args.single_process == 'drive':
-            drive_params['suppress_output'] = False
+            # The definition of parameters for driving
+            drive_params = {
+                "suppress_output": False,
+                "no_screen": args.no_screen,
+                "docker": args.docker,
+                "record_collisions": args.record_collisions
+            }
             execute_drive("0", args.folder, args.exp, list(args.driving_environments)[0], drive_params)
 
         else:

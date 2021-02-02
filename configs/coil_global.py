@@ -3,12 +3,9 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from ast import literal_eval
 from coilutils import AttributeDict, _merge_a_into_b
-import copy
-import numpy as np
+
 import os
-import sys
 import yaml
 
 from configs.namer import generate_name
@@ -21,7 +18,7 @@ _g_conf.immutable(False)
 """#### GENERAL CONFIGURATION PARAMETERS ####"""
 _g_conf.NUMBER_OF_LOADING_WORKERS = 12
 _g_conf.FINISH_ON_VALIDATION_STALE = None
-_g_conf.EXPERIENCE_FILE = None
+_g_conf.EXPERIENCE_FILE = ''
 
 """#### INPUT RELATED CONFIGURATION PARAMETERS ####"""
 _g_conf.SENSORS = {'rgb': (3, 88, 200)}
@@ -50,7 +47,7 @@ _g_conf.EXPERIMENT_NAME = "default"
 _g_conf.EXPERIMENT_GENERATED_NAME = None
 
 # TODO: not necessarily the configuration need to know about this
-_g_conf.PROCESS_NAME = "None"
+_g_conf.PROCESS_NAME = None
 _g_conf.NUMBER_ITERATIONS = 20000
 _g_conf.SAVE_SCHEDULE = 'range(0, 2000, 200)'
 _g_conf.NUMBER_FRAMES_FUSION = 1
@@ -65,7 +62,7 @@ _g_conf.WEATHERS = [1, 3, 6, 8]
 _g_conf.PRELOAD_MODEL_BATCH = None
 _g_conf.PRELOAD_MODEL_ALIAS = None
 _g_conf.PRELOAD_MODEL_CHECKPOINT = None
-
+_g_conf.MODEL_CONFIGURATION = {}
 
 """#### Network Related Parameters ####"""
 
@@ -101,11 +98,8 @@ def merge_with_yaml(yaml_filename):
         yaml_file = yaml.load(f)
 
         yaml_cfg = AttributeDict(yaml_file)
-    print('yaml_cfg: \n', yaml_cfg)
-    print('g_conf: \n', _g_conf)
+
     _merge_a_into_b(yaml_cfg, _g_conf)
-    print('g_conf: \n', _g_conf)
-    sys.exit(1)
 
     path_parts = os.path.split(yaml_filename)
     _g_conf.EXPERIMENT_BATCH_NAME = os.path.split(path_parts[-2])[-1]

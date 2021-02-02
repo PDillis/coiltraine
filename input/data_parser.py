@@ -25,10 +25,9 @@ def forward_speed(measurement_data):
 
 def get_speed(measurement_data):
     """ Extract the proper speed from the measurement data dict """
-
     # If the forward speed is not on the dataset it is because speed is zero.
     if 'playerMeasurements' in measurement_data and \
-            'forwardSpeed' in measurement_data['playerMeasurements']:
+            'forwardSpeed' in measurement_data['playerMeasurements']:   # TODO: forward_speed is now just speed
         return measurement_data['playerMeasurements']['forwardSpeed']
     elif 'velocity_x' in measurement_data:  # We have a 0.9.X data here
         return forward_speed(measurement_data)
@@ -41,8 +40,8 @@ def check_available_measurements(episode):
         The ones named 'steer' are probably the steer for the vehicle
         This needs to be made more general to avoid possible mistakes on dataset reading
     """
-
-    measurements_list = glob.glob(os.path.join(episode, 'measurement*'))
+    measurements_list = glob.glob(os.path.join(episode, '**/measurements*'), recursive=True)  # TODO: this is can_bus* in new data format
+    assert len(measurements_list) > 0, 'No measurements in the episode!'
     # Open a sample measurement
     with open(measurements_list[0]) as f:
         measurement_data = json.load(f)

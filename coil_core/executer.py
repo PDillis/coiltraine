@@ -13,15 +13,12 @@ from . import train, validate, run_drive
 
 def execute_train(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=12):
     """
-
     Args:
         gpu: The gpu being used for this execution.
         module_name: The module name, if it is train, drive or evaluate
         exp_alias: The experiment alias, file name, to be executed.
         path: The path were the datasets are
-
     Returns:
-
     """
     create_exp_path(exp_batch, exp_alias)
     p = multiprocessing.Process(target=train.execute,
@@ -31,15 +28,12 @@ def execute_train(gpu, exp_batch, exp_alias, suppress_output=True, number_of_wor
 
 def execute_validation(gpu, exp_batch, exp_alias, dataset, suppress_output=True):
     """
-
     Args:
         gpu: The gpu being used for this execution.
         module_name: The module name, if it is train, drive or evaluate
         exp_alias: The experiment alias, file name, to be executed.
         path: The path were the datasets are
-
     Returns:
-
     """
     create_exp_path(exp_batch, exp_alias)
     # The difference between train and validation is the
@@ -50,25 +44,18 @@ def execute_validation(gpu, exp_batch, exp_alias, dataset, suppress_output=True)
 
 def execute_drive(gpu, exp_batch, exp_alias, exp_set_name, params):
     """
-
     Args:
         gpu: The gpu being used for this execution.
         exp_batch: the folder this driving experiment is being executed
         exp_alias: The experiment alias, file name, to be executed.
         params: all the rest of parameter, if there is recording and etc.
-
-
     Returns:
-
     """
-
     params.update({'host': "127.0.0.1"})
-
     create_exp_path(exp_batch, exp_alias)
     p = multiprocessing.Process(target=run_drive.execute,
                                 args=(gpu, exp_batch, exp_alias, exp_set_name,
                                       params))
-
     p.start()
 
 
@@ -88,7 +75,6 @@ def folder_execute(params=None):
             driving_environments: The driving environments where the models are going to be tested.
 
     """
-
     folder = params['folder']
     allocated_gpus = params['gpus']
     validation_datasets = params['validation_datasets']

@@ -50,12 +50,14 @@ def is_ready_to_save(iteration):
 
 def get_latest_saved_checkpoint():
     """
-        Returns the , latest checkpoint number that was saved
+        Returns the latest checkpoint number that was saved
 
     """
-    checkpoint_files = os.listdir(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                                               g_conf.EXPERIMENT_NAME, 'checkpoints'))
-    if checkpoint_files == []:
+    checkpoint_files = os.listdir(os.path.join('_logs',
+                                               g_conf.EXPERIMENT_BATCH_NAME,
+                                               g_conf.EXPERIMENT_NAME,
+                                               'checkpoints'))
+    if len(checkpoint_files) == 0:
         return None
     else:
         sort_nicely(checkpoint_files)

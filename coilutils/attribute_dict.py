@@ -78,7 +78,7 @@ class AttributeDict(dict):
         # Try to interpret `v` as a:
         #   string, number, tuple, list, dict, boolean, or None
         try:
-            v = literal_eval(value)
+            value = literal_eval(value)
         # The following two excepts allow v to pass through when it represents a
         # string.
         # Longer explanation:
@@ -89,9 +89,7 @@ class AttributeDict(dict):
         # ok with '"foo"', but will raise a ValueError if given 'foo'. In other
         # cases, like paths (v = 'foo/bar' and not v = '"foo/bar"'), literal_eval
         # will raise a SyntaxError.
-        except ValueError:
-            pass
-        except SyntaxError:
+        except (SyntaxError, ValueError):
             pass
         return value
 
@@ -123,9 +121,8 @@ def _merge_a_into_b(a, b, key_list=[]):
         :b (dict, AttrDict):
         :key_list ():
     '''
-
-    assert isinstance(a, AttributeDict) or isinstance(a, dict), f'Argument `a` must be an AttrDict; cur type: {type(a)}'
-    assert isinstance(b, AttributeDict) or isinstance(a, dict), f'Argument `b` must be an AttrDict; cur type: {type(b)}'
+    assert isinstance(a, AttributeDict), f'Argument `a` must be an AttrDict; cur type: {type(a)}'
+    assert isinstance(b, AttributeDict), f'Argument `b` must be an AttrDict; cur type: {type(b)}'
 
     for key, value_ in a.items():
         full_key = '.'.join(key_list + [key])
@@ -159,7 +156,7 @@ def _check_and_coerce_cfg_value_type(replacement, original, key, full_key):
 
     def extract_type(s):
         '''
-        If
+        Checks and extracts the actual type of the argument s
         Args:
             s: argument to extract the type from
         Example:
