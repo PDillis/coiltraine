@@ -40,7 +40,6 @@ def create_log(exp_batch_name, exp_name, process_name, log_frequency=1, image_lo
     # Hardcoded root path
     root_path = "_logs"
 
-
     dir_name = os.path.join(root_path, exp_batch_name, exp_name)
     full_name = os.path.join(dir_name, process_name)
 
@@ -48,7 +47,6 @@ def create_log(exp_batch_name, exp_name, process_name, log_frequency=1, image_lo
         flog = filelogger(exp_name + '_' + process_name, [], full_name, writing_level='a+')
     else:
         flog = filelogger(exp_name + '_' + process_name, [], full_name, writing_level='w')
-
 
     # TODO: This needs to be updated after a while. ???
     g_logger = flog
@@ -58,6 +56,7 @@ def create_log(exp_batch_name, exp_name, process_name, log_frequency=1, image_lo
     LOG_FREQUENCY = log_frequency
     IMAGE_LOG_FREQUENCY = image_log_frequency
     tl = Logger(os.path.join(root_path, exp_batch_name, exp_name, 'tensorboard_logs_'+process_name))
+
 
 def close():
 
@@ -73,13 +72,14 @@ def add_message(phase, message, iteration=None):
     Args:
         phase: The phase this message corresponds
         message: The dictionary with the message
+        iteration:
 
     Returns:
 
     """
 
     if phase == 'Iterating' and iteration is None:
-        raise ValueError(" Iterating messages should have the iteration/checkpoint.")
+        raise ValueError("Iterating messages should have the iteration/checkpoint.")
 
     if iteration is not None:
         if iteration % LOG_FREQUENCY == 0:
@@ -162,7 +162,6 @@ def write_on_error_csv(error_file_name, output):
 
     file_name = os.path.join(full_path_name, str(error_file_name) + '_error' + '.csv')
 
-
     with open(file_name, 'a+') as f:
         f.write("%f" % output)
         f.write("\n")
@@ -178,7 +177,6 @@ def write_stop(validation_dataset, checkpoint):
 
 
     Returns:
-
     """
     root_path = "_logs"
 
@@ -189,6 +187,7 @@ def write_stop(validation_dataset, checkpoint):
 
     with open(file_name, 'w') as f:
         f.write("%d\n" % checkpoint)
+
 
 def erase_csv(checkpoint_name):
     """
@@ -229,7 +228,6 @@ def recover_loss_window(dataset_name, iteration):
     return recovered_list
 
 
-
 def add_scalar(tag, value, iteration=None, force_writing=False):
 
     """
@@ -247,28 +245,13 @@ def add_scalar(tag, value, iteration=None, force_writing=False):
         tl.scalar_summary(tag, value, 0)
 
 
-
-
-
-
-
 def add_image(tag, images, iteration=None):
-    # Add the image to a log, the monitorer is the module responsible by checking this
+    # Add the image to a log, the monitor is the module responsible by checking this
     # and eventually put some of the images to tensorboard.
-
-
     # TODO: change to sampling 10 images instead
     if iteration is not None:
         if iteration % IMAGE_LOG_FREQUENCY == 0:
-
-
-            print (images.shape)
-
-            images = images.view(-1, images.shape[1],
-                                     images.shape[2],
-                                     images.shape[3])[:10].cpu().data.numpy()
-
-
+            images = images.view(-1, images.shape[1], images.shape[2], images.shape[3])[:10].cpu().data.numpy()
             new_images = [] 
             if images.shape[1] == 1:
                 cmap = plt.get_cmap('inferno')
@@ -276,12 +259,8 @@ def add_image(tag, images, iteration=None):
                     this = cmap(images[i, 0])[:, :, :3]
                     new_images.append(this)
                 images = np.array(new_images).transpose(0, 3, 1, 2)
-                
-            print ("Converted")
-            print (images.shape)
 
             tl.image_summary(tag, images, iteration + 1)
-
 
     else:
 
@@ -289,5 +268,3 @@ def add_image(tag, images, iteration=None):
                              images.shape[2],
                              images.shape[3])[:10].cpu().data.numpy()
         tl.image_summary(tag, images, iteration + 1)
-
-

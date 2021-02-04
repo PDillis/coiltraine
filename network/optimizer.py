@@ -3,7 +3,6 @@ import dlib
 from configs import g_conf
 
 
-
 def adjust_learning_rate(optimizer, num_iters):
     """
     Adjusts the learning rate every epoch based on the selected schedule
@@ -21,7 +20,7 @@ def adjust_learning_rate(optimizer, num_iters):
         learning_rate = max(learning_rate, minlr)
 
     for param_group in optimizer.param_groups:
-        print("New Learning rate is ", learning_rate)
+        print(f"New Learning rate is {learning_rate}")
         param_group['lr'] = learning_rate
 
 

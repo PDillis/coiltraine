@@ -141,7 +141,7 @@ if __name__ == '__main__':
         create_exp_path(args.folder, args.exp)
 
         if args.single_process == 'train':
-            execute_train(gpu=args.gpus[0], exp_batch=args.folder, exp_alias=args.exp,
+            execute_train(gpu=args.gpus[0], exp_folder=args.folder, exp_alias=args.exp,
                           suppress_output=False, number_of_workers=args.number_of_workers)
 
         elif args.single_process == 'validation':

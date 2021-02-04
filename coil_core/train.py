@@ -16,14 +16,14 @@ from coilutils.general import format_time
 
 
 # The main function maybe we could call it with a default name
-def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=12):
+def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=12):
     """
         The main training function. This functions loads the latest checkpoint
         for a given, exp_batch (folder) and exp_alias (experiment configuration).
         With this checkpoint it starts from the beginning or continue some training.
     Args:
         gpu: The GPU number
-        exp_batch: the folder with the experiments
+        exp_folder: the folder with the experiments
         exp_alias: the alias, experiment name
         suppress_output: if the output are going to be saved on a file
         number_of_workers: the number of threads used for data loading
@@ -38,7 +38,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
         g_conf.VARIABLE_WEIGHT = {}
         # At this point the log file with the correct naming is created.
         # You merge the yaml file with the global configuration structure.
-        merge_with_yaml(os.path.join('configs', exp_batch, exp_alias + '.yaml'))
+        merge_with_yaml(os.path.join('configs', exp_folder, exp_alias + '.yaml'))
         set_type_of_process('train')
         # Set the process into loading status.
         coil_logger.add_message('Loading', {'GPU': os.environ['CUDA_VISIBLE_DEVICES']})
@@ -70,7 +70,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
         checkpoint_file = get_latest_saved_checkpoint()
         if checkpoint_file is not None:
             print('Starting from previous best checkpoint...')
-            checkpoint = torch.load(os.path.join('_logs', exp_batch, exp_alias,
+            checkpoint = torch.load(os.path.join('_logs', exp_folder, exp_alias,
                                                  'checkpoints', str(get_latest_saved_checkpoint())))
             iteration = checkpoint['iteration']
             best_loss = checkpoint['best_loss']
@@ -138,8 +138,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
             controls = data['directions']
             # The output(branches) is a list of 5 branches results, each branch is with size [120,3]
             model.zero_grad()
-            branches = model(torch.squeeze(data['rgb'].cuda()),
-                             dataset.extract_inputs(data).cuda())
+            branches = model(torch.squeeze(data['rgb'].cuda()), dataset.extract_inputs(data).cuda())
             loss_function_params = {
                 'branches': branches,
                 'targets': dataset.extract_targets(data).cuda(),
@@ -156,9 +155,8 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
                     Saving the model if necessary
                 ####################################
             """
-
+            # Save the model according to g_conf.SAVE_SCHEDULE
             if is_ready_to_save(iteration):
-
                 state = {
                     'iteration': iteration,
                     'state_dict': model.state_dict(),
@@ -167,8 +165,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
                     'optimizer': optimizer.state_dict(),
                     'best_loss_iter': best_loss_iter
                 }
-                torch.save(state, os.path.join('_logs', exp_batch, exp_alias
-                                               , 'checkpoints', str(iteration) + '.pth'))
+                torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
 
             """
                 ################################################
@@ -187,10 +184,12 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
             position = random.randint(0, len(data) - 1)
 
             output = model.extract_branch(torch.stack(branches[0:4]), controls)
-            error = torch.abs(output - dataset.extract_targets(data).cuda())
+            error = torch.abs(output - dataset.extract_targets(data).cuda())[position].data.tolist()
 
             accumulated_time += time.time() - capture_time
-
+            coil_logger.add_scalar('Error steer', error[0], iteration)
+            coil_logger.add_scalar('Error throttle', error[1], iteration)
+            coil_logger.add_scalar('Error brake', error[2], iteration)
             coil_logger.add_message('Iterating',
                                     {'Iteration': iteration,
                                      'Loss': loss.data.tolist(),
@@ -199,13 +198,16 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
                                      'Output': output[position].data.tolist(),
                                      'GroundTruth': dataset.extract_targets(data)[
                                          position].data.tolist(),
-                                     'Error': error[position].data.tolist(),
+                                     'Error': error,
                                      'Inputs': dataset.extract_inputs(data)[
                                          position].data.tolist()},
                                     iteration)
             loss_window.append(loss.data.tolist())
             coil_logger.write_on_error_csv('train', loss.data)
-            print(f"[{iteration:6d}/{g_conf.NUMBER_ITERATIONS}] - Time: {format_time(accumulated_time)} - Loss: {loss.data:.16f}")
+            # Let's not print that much to the console
+            if iteration % 250 == 0:
+                print(f"[{iteration:6d}/{g_conf.NUMBER_ITERATIONS}] - Time: {format_time(accumulated_time)} - "
+                      f"Loss: {loss.data:.16f}")
 
         coil_logger.add_message('Finished', {})
 

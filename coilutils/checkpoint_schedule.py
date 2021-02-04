@@ -17,23 +17,17 @@ def is_open(file_name):
         file2 = os.stat(file_name)  # updated file size
         file2_size = file2.st_size
         comp = file2_size - file1_size  # compares sizes
-        if comp == 0:
-            return False
-        else:
-            return True
-
-    raise NameError
-
+        return not comp == 0
+    else:
+        raise NameError
 
 
 def maximun_checkpoint_reach(iteration, checkpoint_schedule):
     if iteration is None:
         return False
 
-    if iteration >= max(checkpoint_schedule):
-        return True
     else:
-        return False
+        return iteration >= max(checkpoint_schedule)
 
 
 """ FUNCTIONS FOR SAVING THE CHECKPOINTS """
@@ -43,20 +37,16 @@ def is_ready_to_save(iteration):
     """ Returns if the iteration is a iteration for saving a checkpoint
 
     """
-    if iteration in set(g_conf.SAVE_SCHEDULE):
-        return True
-    else:
-        return False
+    return iteration in set(g_conf.SAVE_SCHEDULE)
+
 
 def get_latest_saved_checkpoint():
     """
         Returns the latest checkpoint number that was saved
 
     """
-    checkpoint_files = os.listdir(os.path.join('_logs',
-                                               g_conf.EXPERIMENT_BATCH_NAME,
-                                               g_conf.EXPERIMENT_NAME,
-                                               'checkpoints'))
+    checkpoint_files = os.listdir(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
+                                               g_conf.EXPERIMENT_NAME, 'checkpoints'))
     if len(checkpoint_files) == 0:
         return None
     else:
@@ -65,6 +55,7 @@ def get_latest_saved_checkpoint():
 
 
 """ FUNCTIONS FOR GETTING THE CHECKPOINTS"""
+
 
 def get_latest_evaluated_checkpoint(filename=None):
 
@@ -90,15 +81,14 @@ def is_next_checkpoint_ready(checkpoint_schedule, control_filename=None):
         next_check = checkpoint_schedule[checkpoint_schedule.index(ltst_check)+1]
 
     # Check if the file is in the checkpoints list.
-    if os.path.exists(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                                            g_conf.EXPERIMENT_NAME, 'checkpoints')):
+    if os.path.exists(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME, g_conf.EXPERIMENT_NAME, 'checkpoints')):
 
         # test if the file exist:
         if str(next_check) + '.pth' in os.listdir(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
                                                                g_conf.EXPERIMENT_NAME, 'checkpoints')):
             # now check if someone is writing to it, if it is the case return false
-            return not is_open(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                               g_conf.EXPERIMENT_NAME, 'checkpoints', str(next_check) + '.pth'))
+            return not is_open(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME, g_conf.EXPERIMENT_NAME,
+                                            'checkpoints', f'{next_check}.pth'))
 
         else:
             return False
@@ -116,7 +106,7 @@ def get_next_checkpoint(checkpoint_schedule, filename=None):
         raise RuntimeError("Not able to get next checkpoint, maximum checkpoint is reach")
 
     print(checkpoint_schedule.index(ltst_check))
-    print (ltst_check)
+    print(ltst_check)
     return checkpoint_schedule[checkpoint_schedule.index(ltst_check) + 1]
 
 
@@ -127,33 +117,25 @@ def check_loss_validation_stopped(checkpoint, validation_name):
      check if the training iteration is bigger than than the stale checkpoint
 
     """
-
-    stale_file_name = "validation_" + validation_name + "_stale.csv"
-    full_path = os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                                            g_conf.EXPERIMENT_NAME, stale_file_name)
+    stale_file_name = f"validation_{validation_name}_stale.csv"
+    full_path = os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME, g_conf.EXPERIMENT_NAME, stale_file_name)
 
     if os.path.exists(full_path):
         with open(full_path, 'r') as f:
             # So if training ran more iterations more than the stale point of validation
-            if checkpoint > int(f.read()):
-                return True
-            else:
-                return False
-
+            return checkpoint > int(f.read())
     else:
         return False
 
 
 def validation_stale_point(validation_name):
 
-    stale_file_name = "validation_" + validation_name + "_stale.csv"
-    full_path = os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                                            g_conf.EXPERIMENT_NAME, stale_file_name)
+    stale_file_name = f"validation_{validation_name}_stale.csv"
+    full_path = os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME, g_conf.EXPERIMENT_NAME, stale_file_name)
 
     if os.path.exists(full_path):
         with open(full_path, 'r') as f:
             #  Return the stale iteration of the validation
             return int(f.read())
-
     else:
         return None
