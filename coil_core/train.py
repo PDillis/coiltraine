@@ -12,6 +12,7 @@ from input import CoILDataset, Augmenter, select_balancing_strategy
 from logger import coil_logger
 from coilutils.checkpoint_schedule import is_ready_to_save, get_latest_saved_checkpoint, \
                                     check_loss_validation_stopped
+from coilutils.general import format_time
 
 
 # The main function maybe we could call it with a default name
@@ -204,7 +205,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=1
                                     iteration)
             loss_window.append(loss.data.tolist())
             coil_logger.write_on_error_csv('train', loss.data)
-            print(f"Iteration: {iteration}  Loss: {loss.data}")
+            print(f"[{iteration:6d}/{g_conf.NUMBER_ITERATIONS}] - Time: {format_time(accumulated_time)} - Loss: {loss.data:.16f}")
 
         coil_logger.add_message('Finished', {})
 

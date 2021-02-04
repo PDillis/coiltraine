@@ -5,6 +5,7 @@ import numpy as np
 
 from email.mime.text import MIMEText
 from PIL import Image
+from typing import Union
 
 
 def static_vars(**kwargs):
@@ -14,6 +15,7 @@ def static_vars(**kwargs):
         return func
     return decorate
 
+
 def softmax(x):
     """Compute softmax values for each sets of scores in x."""
     temp = 10
@@ -22,12 +24,12 @@ def softmax(x):
     return e_x / e_x.sum()
 
 
-
 def tryint(s):
     try:
         return int(s)
-    except:
+    except (ValueError, TypeError):
         return s
+
 
 def unique(sequence):
     seen = set()
@@ -40,6 +42,7 @@ def alphanum_key(s):
     """
     return [tryint(c) for c in re.split('([0-9]+)', s) ]
 
+
 def sort_nicely(l):
     """ Sort the given list in the way that humans expect.
     """
@@ -50,6 +53,7 @@ def sort_nicely(l):
 def command_number_to_index(command_vector):
 
     return command_vector-2
+
 
 def camelcase_to_snakecase(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
@@ -65,7 +69,6 @@ def snakecase_to_camelcase(column):
 
 
 def plot_test_image(image, name):
-
     image_to_plot = Image.fromarray(image)
     image_to_plot.save(name)
 
@@ -106,7 +109,7 @@ def get_validation_datasets(exp_batch_name):
             experiments = os.listdir(os.path.join(root_path, exp_batch_name, exp))
             for log in experiments:
                 folder_file = os.path.join(root_path, exp_batch_name, exp, log)
-                if  os.path.isdir(folder_file) and 'validation' in folder_file:
+                if os.path.isdir(folder_file) and 'validation' in folder_file:
                     validation_datasets.add(folder_file.split('_')[-1])
 
     return list(validation_datasets)
@@ -145,9 +148,7 @@ def erase_logs(exp_batch_name):
 
 
 def erase_wrong_plotting_summaries(exp_batch_name, validation_data_list, ):
-
     root_path = '_logs'
-
     experiments = os.listdir(os.path.join(root_path, exp_batch_name))
 
     # Get the correct files sizes for each validation
@@ -191,19 +192,15 @@ def erase_wrong_plotting_summaries(exp_batch_name, validation_data_list, ):
 
 def erase_validations(exp_batch_name, validation_data_list ):
     # TODO: eventually add that for driving
-
     # Erase wrong plotting for validation!
-
     root_path = '_logs'
-
-
     experiments = os.listdir(os.path.join(root_path, exp_batch_name))
 
     # Get the correct files sizes for each validation
     # open the csv file with the ground_truth
 
     for exp in experiments:
-        print ("exp", exp)
+        print("exp", exp)
         for validation_log in validation_data_list:
             folder_name = 'validation_' + validation_log + '_csv'
             print(' VALIDATION ----- ', folder_name)
@@ -216,7 +213,6 @@ def erase_validations(exp_batch_name, validation_data_list ):
                 csv_file_path = os.path.join(root_path, exp_batch_name, exp,
                                              folder_name, csv_result)
                 os.remove(csv_file_path)
-
 
 
 def get_latest_path(path):
@@ -314,15 +310,12 @@ def compute_average_std(dic_list, weathers, number_of_tasks=1):
             for i in range(len(metric_sum_values)):
                 average_results_matrix[metric][i][count_dic_pos] = metric_sum_values[i]
 
-
-
         # For the metrics we sum over all the weathers here, this is to better subdivide the driving envs
         for metric in infraction_metrics:
             values_driven = metrics_summary['driven_kilometers']
             values = metrics_summary[metric]
             metric_sum_values = np.zeros(number_of_episodes)
             summed_driven_kilometers = np.zeros(number_of_episodes)
-
 
             # print (zip(values.items(), values_driven.items()))
             for items_metric, items_driven in zip(values.items(), values_driven.items()):
@@ -344,7 +337,6 @@ def compute_average_std(dic_list, weathers, number_of_tasks=1):
 
                         count += 1
 
-
             # On this part average results matrix basically assume the number of infractions.
             for i in range(len(metric_sum_values)):
                 if metric_sum_values[i] == 0:
@@ -352,11 +344,9 @@ def compute_average_std(dic_list, weathers, number_of_tasks=1):
                 else:
                     average_results_matrix[metric][i][count_dic_pos] = metric_sum_values[i]
 
-
         for metric in metrics_to_sum:
             values = metrics_summary[metric]
             metric_sum_values = np.zeros(number_of_episodes)
-
 
             # print (zip(values.items(), values_driven.items()))
             for items_metric  in values.items():
@@ -376,24 +366,18 @@ def compute_average_std(dic_list, weathers, number_of_tasks=1):
 
                         count += 1
 
-
             # On this part average results matrix basically assume the number of infractions.
             for i in range(len(metric_sum_values)):
                     average_results_matrix[metric][i][count_dic_pos] = metric_sum_values[i]
         count_dic_pos += 1
 
-
-
     print(metrics_summary['average_speed'])
     average_speed_task = sum(metrics_summary['average_speed'][str(float(list(weathers)[0]))])
 
-
     average_results_matrix.update({'driven_kilometers': np.array(sum(summed_driven_kilometers))})
-
 
     average_results_matrix.update({'average_speed': np.array([average_speed_task])})
     print(average_results_matrix)
-
 
     for metric, vectors in average_results_matrix.items():
 
@@ -417,14 +401,17 @@ def compute_average_std(dic_list, weathers, number_of_tasks=1):
 
     return average_results_matrix
 
+
 """
     Writing for the driving summary calculation.
 """
+
+
 def write_header_control_summary(path, task):
 
     filename = os.path.join(path + '_' + task + '.csv')
 
-    print (filename)
+    print(filename)
 
     csv_outfile = open(filename, 'w')
 
@@ -436,12 +423,11 @@ def write_header_control_summary(path, task):
     csv_outfile.close()
 
 
-
 def write_data_point_control_summary(path, task, averaged_dict, step, pos):
 
     filename = os.path.join(path + '_' + task + '.csv')
 
-    print (filename)
+    print(filename)
 
     if not os.path.exists(filename):
         raise ValueError("The filename does not yet exists")
@@ -463,6 +449,7 @@ def write_data_point_control_summary(path, task, averaged_dict, step, pos):
 
     csv_outfile.close()
 
+
 # TODO: Needs refactoring
 def compute_average_std_separatetasks(dic_list, weathers, number_of_tasks=1):
     """
@@ -477,7 +464,6 @@ def compute_average_std_separatetasks(dic_list, weathers, number_of_tasks=1):
     For this you have the concept of averaging all the weathers from the experiment suite.
 
     """
-
     metrics_to_average = [
         'episodes_fully_completed',
         'episodes_completion'
@@ -598,8 +584,6 @@ def compute_average_std_separatetasks(dic_list, weathers, number_of_tasks=1):
 
         count_dic_pos += 1
 
-
-
     average_speed_task = sum(metrics_summary['average_speed'][str(float(list(weathers)[0]))])
 
     average_results_matrix.update({'driven_kilometers': np.array(summed_driven_kilometers)})
@@ -607,5 +591,18 @@ def compute_average_std_separatetasks(dic_list, weathers, number_of_tasks=1):
     average_results_matrix.update({'average_speed': np.array([average_speed_task])})
     print(average_results_matrix)
 
-
     return average_results_matrix
+
+
+def format_time(seconds: Union[int, float]) -> str:
+    """Convert the seconds to human readable string with days, hours, minutes and seconds."""
+    s = int(np.rint(seconds))
+
+    if s < 60:
+        return "{0}s".format(s)
+    elif s < 60 * 60:
+        return "{0}m {1:02}s".format(s // 60, s % 60)
+    elif s < 24 * 60 * 60:
+        return "{0}h {1:02}m {2:02}s".format(s // (60 * 60), (s // 60) % 60, s % 60)
+    else:
+        return "{0}d {1:02}h {2:02}m".format(s // (24 * 60 * 60), (s // (60 * 60)) % 24, (s // 60) % 60)

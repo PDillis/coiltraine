@@ -35,12 +35,13 @@ def adjust_learning_rate_auto(optimizer, loss_window):
     decaylevel = g_conf.LEARNING_RATE_DECAY_LEVEL
     n = 1000
     start_point = 0
-    print ("Loss window ", loss_window)
     while n < len(loss_window):
-        print ("Startpoint ", start_point, " N  ", n)
+        print(f'Start point: {start_point}, n={n}')
+        # use dlib.net to see for how many steps the noisy loss has gone without noticeably decreasing in value
         steps_no_decrease = dlib.count_steps_without_decrease(loss_window[start_point:n])
+        # ibidem, just discarding the 10% largest values
         steps_no_decrease_robust = dlib.count_steps_without_decrease_robust(loss_window[start_point:n])
-        print ("no decrease, ", steps_no_decrease, " robust", steps_no_decrease_robust)
+        print(f"Not decreased for {steps_no_decrease} steps ({steps_no_decrease_robust} robust)")
         if steps_no_decrease > thresh and steps_no_decrease_robust > thresh:
             start_point = n
             learning_rate = learning_rate * decaylevel
@@ -50,5 +51,5 @@ def adjust_learning_rate_auto(optimizer, loss_window):
     learning_rate = max(learning_rate, minlr)
 
     for param_group in optimizer.param_groups:
-        print("New Learning rate is ", learning_rate)
+        print(f"New Learning rate is {learning_rate}")
         param_group['lr'] = learning_rate
