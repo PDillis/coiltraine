@@ -11,7 +11,7 @@ from logger import printer, monitorer
 from . import train, validate, run_drive
 
 
-def execute_train(gpu, exp_batch, exp_alias, suppress_output=True, number_of_workers=12):
+def execute_train(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=12):
     """
     Args:
         gpu: The gpu being used for this execution.
@@ -20,13 +20,13 @@ def execute_train(gpu, exp_batch, exp_alias, suppress_output=True, number_of_wor
         path: The path were the datasets are
     Returns:
     """
-    create_exp_path(exp_batch, exp_alias)
+    create_exp_path(exp_folder, exp_alias)
     p = multiprocessing.Process(target=train.execute,
-                                args=(gpu, exp_batch, exp_alias, suppress_output, number_of_workers))
+                                args=(gpu, exp_folder, exp_alias, suppress_output, number_of_workers))
     p.start()
 
 
-def execute_validation(gpu, exp_batch, exp_alias, dataset, suppress_output=True):
+def execute_validation(gpu, exp_folder, exp_alias, dataset, suppress_output=True):
     """
     Args:
         gpu: The gpu being used for this execution.
@@ -35,26 +35,26 @@ def execute_validation(gpu, exp_batch, exp_alias, dataset, suppress_output=True)
         path: The path were the datasets are
     Returns:
     """
-    create_exp_path(exp_batch, exp_alias)
+    create_exp_path(exp_folder, exp_alias)
     # The difference between train and validation is the
     p = multiprocessing.Process(target=validate.execute,
-                                args=(gpu, exp_batch, exp_alias, dataset, suppress_output))
+                                args=(gpu, exp_folder, exp_alias, dataset, suppress_output))
     p.start()
 
 
-def execute_drive(gpu, exp_batch, exp_alias, exp_set_name, params):
+def execute_drive(gpu, exp_folder, exp_alias, exp_set_name, params):
     """
     Args:
         gpu: The gpu being used for this execution.
-        exp_batch: the folder this driving experiment is being executed
+        exp_folder: the folder this driving experiment is being executed
         exp_alias: The experiment alias, file name, to be executed.
         params: all the rest of parameter, if there is recording and etc.
     Returns:
     """
     params.update({'host': "127.0.0.1"})
-    create_exp_path(exp_batch, exp_alias)
+    create_exp_path(exp_folder, exp_alias)
     p = multiprocessing.Process(target=run_drive.execute,
-                                args=(gpu, exp_batch, exp_alias, exp_set_name,
+                                args=(gpu, exp_folder, exp_alias, exp_set_name,
                                       params))
     p.start()
 

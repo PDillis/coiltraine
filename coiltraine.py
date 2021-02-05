@@ -1,4 +1,10 @@
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import argparse
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 from coil_core import execute_train, execute_validation, execute_drive, folder_execute
 from coilutils.general import create_log_folder, create_exp_path, erase_logs,\

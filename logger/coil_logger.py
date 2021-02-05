@@ -20,9 +20,7 @@ tl = ''
 
 
 def create_log(exp_batch_name, exp_name, process_name, log_frequency=1, image_log_frequency=15):
-
     """
-
     Arguments
         exp_batch_name: The name of the experiments folder
         exp_name: the name of the current folder that is being used.
@@ -44,9 +42,9 @@ def create_log(exp_batch_name, exp_name, process_name, log_frequency=1, image_lo
     full_name = os.path.join(dir_name, process_name)
 
     if os.path.isfile(full_name):
-        flog = filelogger(exp_name + '_' + process_name, [], full_name, writing_level='a+')
+        flog = filelogger(f'{exp_name}_{process_name}', [], full_name, writing_level='a+')
     else:
-        flog = filelogger(exp_name + '_' + process_name, [], full_name, writing_level='w')
+        flog = filelogger(f'{exp_name}_{process_name}', [], full_name, writing_level='w')
 
     # TODO: This needs to be updated after a while. ???
     g_logger = flog
@@ -77,7 +75,6 @@ def add_message(phase, message, iteration=None):
     Returns:
 
     """
-
     if phase == 'Iterating' and iteration is None:
         raise ValueError("Iterating messages should have the iteration/checkpoint.")
 
@@ -120,7 +117,7 @@ def check_finish(process, drive_name=None):
 
 def write_on_csv(checkpoint_name, output):
     """
-    We also create the posibility to write on a csv file. So it is faster to load
+    We also create the possibility to write on a csv file. So it is faster to load
     and check. Just using this to write the network outputs
     Args
         checkpoint_name: the name of the checkpoint being writen
@@ -132,8 +129,7 @@ def write_on_csv(checkpoint_name, output):
     """
     root_path = "_logs"
 
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME, PROCESS_NAME + '_csv')
+    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME, f'{PROCESS_NAME}_csv')
 
     file_name = os.path.join(full_path_name, str(checkpoint_name) + '.csv')
 
@@ -263,8 +259,5 @@ def add_image(tag, images, iteration=None):
             tl.image_summary(tag, images, iteration + 1)
 
     else:
-
-        images = images.view(-1, images.shape[1],
-                             images.shape[2],
-                             images.shape[3])[:10].cpu().data.numpy()
+        images = images.view(-1, images.shape[1], images.shape[2], images.shape[3])[:10].cpu().data.numpy()
         tl.image_summary(tag, images, iteration + 1)

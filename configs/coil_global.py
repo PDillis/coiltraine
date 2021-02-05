@@ -94,9 +94,7 @@ def merge_with_yaml(yaml_filename):
     """Load a yaml config file and merge it into the global config object"""
     global _g_conf
     with open(yaml_filename, 'r') as f:
-
-        yaml_file = yaml.load(f)
-
+        yaml_file = yaml.load(f, Loader=yaml.BaseLoader)
         yaml_cfg = AttributeDict(yaml_file)
 
     _merge_a_into_b(yaml_cfg, _g_conf)

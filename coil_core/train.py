@@ -5,6 +5,7 @@ import time
 import traceback
 import torch
 import torch.optim as optim
+import numpy as np
 
 from configs import g_conf, set_type_of_process, merge_with_yaml
 from network import CoILModel, Loss, adjust_learning_rate_auto
@@ -114,6 +115,9 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         print(f"Setting the loss ({g_conf.LOSS_FUNCTION})")
         criterion = Loss(g_conf.LOSS_FUNCTION)
 
+        # For printing on the console purposes
+        iteration_digits = int(np.log10(g_conf.NUMBER_ITERATIONS))
+
         # Loss time series window
         for data in data_loader:
 
@@ -151,23 +155,6 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             loss.backward()
             optimizer.step()
             """
-                ####################################
-                    Saving the model if necessary
-                ####################################
-            """
-            # Save the model according to g_conf.SAVE_SCHEDULE
-            if is_ready_to_save(iteration):
-                state = {
-                    'iteration': iteration,
-                    'state_dict': model.state_dict(),
-                    'best_loss': best_loss,
-                    'total_time': accumulated_time,
-                    'optimizer': optimizer.state_dict(),
-                    'best_loss_iter': best_loss_iter
-                }
-                torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
-
-            """
                 ################################################
                     Adding tensorboard logs.
                     Making calculations for logging purposes.
@@ -204,10 +191,29 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                                     iteration)
             loss_window.append(loss.data.tolist())
             coil_logger.write_on_error_csv('train', loss.data)
+            # Console message to print
+            console_message = f"[{iteration:{iteration_digits}d}/{g_conf.NUMBER_ITERATIONS}] - Time: "\
+                              f"{format_time(accumulated_time):9s} - Loss: {loss.data:.16f}"
+            """
+            ######################################
+                        Saving the model 
+            ######################################
+            """
+            # Save the model according to g_conf.SAVE_SCHEDULE
+            if is_ready_to_save(iteration):
+                console_message += ' - Saving the model!'
+                state = {
+                    'iteration': iteration,
+                    'state_dict': model.state_dict(),
+                    'best_loss': best_loss,
+                    'total_time': accumulated_time,
+                    'optimizer': optimizer.state_dict(),
+                    'best_loss_iter': best_loss_iter
+                }
+                torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
             # Let's not print that much to the console
             if iteration % 250 == 0:
-                print(f"[{iteration:6d}/{g_conf.NUMBER_ITERATIONS}] - Time: {format_time(accumulated_time)} - "
-                      f"Loss: {loss.data:.16f}")
+                print(console_message)
 
         coil_logger.add_message('Finished', {})
 
