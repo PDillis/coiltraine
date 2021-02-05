@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.misc import comb
+from scipy.special import comb
 
 def bernstein_poly(i, n, t):
     """

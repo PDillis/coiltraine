@@ -8,8 +8,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy
-from scipy.misc import imresize
+import scipy.misc
 import torch
 
 from coilutils.drive_utils import checkpoint_parse_configuration_file
@@ -137,7 +136,7 @@ class CoILBaseline(AutonomousAgent):
             att = att / att.max()
             att = cmap(att)
             att = np.delete(att, 3, 2)
-            attentions.append(imresize(att, [88, 200]))
+            attentions.append(scipy.misc.imresize(att, [88, 200]))
         return attentions
 
     def _process_sensors(self, sensor):

@@ -1,13 +1,10 @@
 import colorsys
 import pygame
+
 import numpy as np
-import matplotlib.pyplot as plt
 from random import randint
 
 from skimage import transform as trans
-
-import time
-import math
 import scipy
 import cv2
 

@@ -70,18 +70,17 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         # returns none if there are no checkpoints saved for this model
         checkpoint_file = get_latest_saved_checkpoint()
         if checkpoint_file is not None:
-            print('Starting from previous best checkpoint...')
+            print(f'=>Starting from previous best checkpoint...{get_latest_saved_checkpoint()}')
             checkpoint = torch.load(os.path.join('_logs', exp_folder, exp_alias,
                                                  'checkpoints', str(get_latest_saved_checkpoint())))
             iteration = checkpoint['iteration']
             best_loss = checkpoint['best_loss']
             best_loss_iter = checkpoint['best_loss_iter']
         else:
-            print('Starting from scratch...')
+            print('=>Starting from scratch...')
             iteration = 0
             best_loss = 10000.0
             best_loss_iter = 0
-
 
         # Define the dataset. This structure is has the __get_item__ redefined in a way
         # that you can access the positions from the root directory as a in a vector.
@@ -96,7 +95,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         dataset = CoILDataset(full_dataset,
                               transform=augmenter,
                               preload_name=f'{g_conf.NUMBER_OF_HOURS}hours_{g_conf.TRAIN_DATASET_NAME}')
-        print("Loaded dataset")
+        print("=>Loaded dataset")
 
         data_loader = select_balancing_strategy(dataset, iteration, number_of_workers)
         model = CoILModel(g_conf.MODEL_TYPE, g_conf.MODEL_CONFIGURATION)
@@ -112,12 +111,14 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             accumulated_time = 0
             loss_window = []
 
-        print(f"Setting the loss ({g_conf.LOSS_FUNCTION})")
+        print(f"=>Setting the loss ({g_conf.LOSS_FUNCTION})")
         criterion = Loss(g_conf.LOSS_FUNCTION)
 
         # For printing on the console purposes
-        iteration_digits = int(np.log10(g_conf.NUMBER_ITERATIONS))
-
+        iteration_digits = int(np.log10(g_conf.NUMBER_ITERATIONS)) + 1
+        print(20 * '#')
+        print(' Starting training!')
+        print(20 * '#')
         # Loss time series window
         for data in data_loader:
 
@@ -212,9 +213,11 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                 }
                 torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
             # Let's not print that much to the console
-            if iteration % 250 == 0:
+            if iteration % 1 == 0:
                 print(console_message)
-
+        print(20*'#')
+        print(' Finished training!')
+        print(20 * '#')
         coil_logger.add_message('Finished', {})
 
     except KeyboardInterrupt:

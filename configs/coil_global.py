@@ -49,11 +49,11 @@ _g_conf.EXPERIMENT_GENERATED_NAME = None
 # TODO: not necessarily the configuration need to know about this
 _g_conf.PROCESS_NAME = None
 _g_conf.NUMBER_ITERATIONS = 20000
-_g_conf.SAVE_SCHEDULE = 'range(0, 2000, 200)'
+_g_conf.SAVE_SCHEDULE = range(0, 2000, 200)
 _g_conf.NUMBER_FRAMES_FUSION = 1
 _g_conf.NUMBER_IMAGES_SEQUENCE = 1
 _g_conf.SEQUENCE_STRIDE = 1
-_g_conf.TEST_SCHEDULE = 'range(0, 2000, 200)'
+_g_conf.TEST_SCHEDULE = range(0, 2000, 200)
 _g_conf.SPEED_FACTOR = 12.0
 _g_conf.AUGMENT_LATERAL_STEERINGS = 6
 _g_conf.NUMBER_OF_HOURS = 1
@@ -94,7 +94,7 @@ def merge_with_yaml(yaml_filename):
     """Load a yaml config file and merge it into the global config object"""
     global _g_conf
     with open(yaml_filename, 'r') as f:
-        yaml_file = yaml.load(f, Loader=yaml.BaseLoader)
+        yaml_file = yaml.load(f, Loader=yaml.FullLoader)
         yaml_cfg = AttributeDict(yaml_file)
 
     _merge_a_into_b(yaml_cfg, _g_conf)
@@ -103,6 +103,8 @@ def merge_with_yaml(yaml_filename):
     _g_conf.EXPERIMENT_BATCH_NAME = os.path.split(path_parts[-2])[-1]
     _g_conf.EXPERIMENT_NAME = path_parts[-1].split('.')[-2]
     _g_conf.EXPERIMENT_GENERATED_NAME = generate_name(_g_conf)
+    _g_conf.SAVE_SCHEDULE = eval(_g_conf.SAVE_SCHEDULE)
+    _g_conf.TEST_SCHEDULE = eval(_g_conf.TEST_SCHEDULE)
 
 
 def get_names(folder):
@@ -163,12 +165,10 @@ def set_type_of_process(process_type, param=None):
                                       'checkpoints'))
 
     if process_type == "validation" or process_type == 'drive':
-        if not os.path.exists(os.path.join('_logs', _g_conf.EXPERIMENT_BATCH_NAME,
-                                           _g_conf.EXPERIMENT_NAME,
-                                           _g_conf.PROCESS_NAME + '_csv')):
-            os.mkdir(os.path.join('_logs', _g_conf.EXPERIMENT_BATCH_NAME,
-                                          _g_conf.EXPERIMENT_NAME,
-                                           _g_conf.PROCESS_NAME + '_csv'))
+        csv_path = os.path.join('_logs', _g_conf.EXPERIMENT_BATCH_NAME,
+                                _g_conf.EXPERIMENT_NAME, f'{_g_conf.PROCESS_NAME}_csv')
+        if not os.path.exists(csv_path):
+            os.mkdir(csv_path)
 
 
     # TODO: check if there is some integrity.

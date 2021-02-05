@@ -70,11 +70,10 @@ from carla08.settings import CarlaSettings
 
 from carla08.client import VehicleControl
 from carla08 import sensor
-import carla08 as carla
+# import carla08 as carla
 # from agents.navigation.roaming_agent import *
 # from agents.navigation.basic_agent import *
-# Imports from the coiltraine system.
-from coilutils import AttributeDict
+
 
 
 
