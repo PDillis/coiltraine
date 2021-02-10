@@ -153,10 +153,9 @@ def write_on_error_csv(error_file_name, output):
     """
     root_path = "_logs"
 
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME)
+    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME)
 
-    file_name = os.path.join(full_path_name, str(error_file_name) + '_error' + '.csv')
+    file_name = os.path.join(full_path_name, f'{error_file_name}_error.csv')
 
     with open(file_name, 'a+') as f:
         f.write("%f" % output)

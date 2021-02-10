@@ -28,6 +28,7 @@ except IndexError:
     pass
 # We  need to add two things here to the python path,
 
+# TODO: srunner.challenge no longer exists for Carla >= 0.9.9
 from srunner.challenge.autoagents.autonomous_agent import AutonomousAgent, Track
 from agents.navigation.local_planner import RoadOption
 

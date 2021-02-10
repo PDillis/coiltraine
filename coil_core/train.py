@@ -121,7 +121,6 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         print(20 * '#')
         # Loss time series window
         for data in data_loader:
-
             # Basically in this mode of execution, we validate every X Steps, if it goes up 3 times,
             # add a stop on the _logs folder that is going to be read by this process
             if g_conf.FINISH_ON_VALIDATION_STALE is not None and \
@@ -213,7 +212,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                 }
                 torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
             # Let's not print that much to the console
-            if iteration % 1 == 0:
+            if iteration % 250 == 0:
                 print(console_message)
         print(20*'#')
         print(' Finished training!')

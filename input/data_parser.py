@@ -34,12 +34,12 @@ def get_speed(measurement_data):
         return 0.0
 
 
-def check_available_measurements(episode):
+def check_available_measurements(client):
     """ Try to automatically check the measurements
         The ones named 'steer' are probably the steer for the vehicle
         This needs to be made more general to avoid possible mistakes on dataset reading
     """
-    measurements_list = glob.glob(os.path.join(episode, '**/measurements*'), recursive=True)  # TODO: this is can_bus* in new data format
+    measurements_list = glob.glob(os.path.join(client, '**/can_bus*'), recursive=True)
     assert len(measurements_list) > 0, 'No measurements in the episode!'
     # Open a sample measurement
     with open(measurements_list[0]) as f:

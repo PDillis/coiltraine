@@ -15,7 +15,6 @@ def l1_attention(params):
 
 
 def branched_loss(loss_function, params):
-
     """
     Args
         loss_function: The loss functional that is actually computing the loss
@@ -32,7 +31,6 @@ def branched_loss(loss_function, params):
     Returns
         The computed loss function, but also a dictionary with plotable variables for tensorboard
     """
-
     controls_mask = LF.compute_branches_masks(params['controls'],
                                               params['branches'][0].shape[1])
     # Update the dictionary to add also the controls mask.
@@ -50,14 +48,12 @@ def branched_loss(loss_function, params):
                                + loss_branches_vec[i][:, 1] * params['variable_weights']['Gas'] \
                                + loss_branches_vec[i][:, 2] * params['variable_weights']['Brake']
 
-    loss_function = loss_branches_vec[0] + loss_branches_vec[1] + loss_branches_vec[2] + \
-                    loss_branches_vec[3]
+    loss_function = loss_branches_vec[0] + loss_branches_vec[1] + loss_branches_vec[2] + loss_branches_vec[3]
 
-    speed_loss = loss_branches_vec[4]/(params['branches'][0].shape[0])
+    speed_loss = loss_branches_vec[4] / (params['branches'][0].shape[0])
 
-    return torch.sum(loss_function) / (params['branches'][0].shape[0])\
-                + torch.sum(speed_loss) / (params['branches'][0].shape[0]),\
-           plotable_params
+    return torch.sum(loss_function) / (params['branches'][0].shape[0]) \
+           + torch.sum(speed_loss) / (params['branches'][0].shape[0]), plotable_params
 
 
 def Loss(loss_name):

@@ -110,11 +110,11 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         self.avgpool = nn.AvgPool2d(2, stride=0)
 
-        # TODO: THis is a super hardcoding ..., in order to fit my image size on resnet
+        # TODO: This is hardcoded, but there is a formula for input_shape -> neurons in the fc layer
         if block.__name__ == 'Bottleneck':
-            self.fc = nn.Linear(6144, num_classes)
+            self.fc = nn.Linear(2048 * 5 * 6, num_classes)  # 2048 * 1 * 3 for [3, 88, 200]
         else:
-            self.fc = nn.Linear(1536, num_classes)
+            self.fc = nn.Linear(512 * 5 * 6, num_classes)  # 512 * 1 * 3 for [3, 88, 200]
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -175,6 +175,18 @@ class ResNet(nn.Module):
 
         all_layers = [x0, x1, x2, x3, x4, x5, x]
         return all_layers
+
+    def get_resnet_output(self, shape):
+        """
+        For debugging purposes (output should be [1, num_classes], but errors might happen along the way).
+        Args:
+            shape (list): pass the shape of the input and simulate the output size.
+        """
+        batch_size = 1
+        input = torch.autograd.Variable(torch.rand(batch_size, *shape))
+        output_feat, _ = self.forward(input)
+        n_size = output_feat.data.view(batch_size, -1).size(1)
+        return n_size
 
 
 def resnet18(pretrained=False, **kwargs):

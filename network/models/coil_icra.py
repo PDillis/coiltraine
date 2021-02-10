@@ -11,6 +11,7 @@ from .building_blocks import Branching
 from .building_blocks import FC
 from .building_blocks import Join
 
+
 class CoILICRA(nn.Module):
 
     def __init__(self, params):
@@ -21,25 +22,25 @@ class CoILICRA(nn.Module):
 
         number_first_layer_channels = 0
 
+        # If we fuse more than one frame, then the first layer will be a concatenation of
+        # the channels of this first layer (e.g., 2 RGB images->3+3=6)
         for _, sizes in g_conf.SENSORS.items():
             number_first_layer_channels += sizes[0] * g_conf.NUMBER_FRAMES_FUSION
 
         # Get one item from the dict
-        sensor_input_shape = next(iter(g_conf.SENSORS.values()))
+        sensor_input_shape = next(iter(g_conf.SENSORS.values()))  # [3, 300, 400]
         sensor_input_shape = [number_first_layer_channels, sensor_input_shape[1],
-                              sensor_input_shape[2]]
+                              sensor_input_shape[2]]  # replace the above result on the channels here
 
         # For this case we check if the perception layer is of the type "conv"
         if 'conv' in params['perception']:
-            perception_convs = Conv(params={'channels': [number_first_layer_channels] +
-                                                          params['perception']['conv']['channels'],
+            perception_convs = Conv(params={'channels': [number_first_layer_channels] + params['perception']['conv']['channels'],
                                             'kernels': params['perception']['conv']['kernels'],
                                             'strides': params['perception']['conv']['strides'],
                                             'dropouts': params['perception']['conv']['dropouts'],
                                             'end_layer': True})
 
-            perception_fc = FC(params={'neurons': [perception_convs.get_conv_output(sensor_input_shape)]
-                                                  + params['perception']['fc']['neurons'],
+            perception_fc = FC(params={'neurons': [perception_convs.get_conv_output(sensor_input_shape)] + params['perception']['fc']['neurons'],
                                        'dropouts': params['perception']['fc']['dropouts'],
                                        'end_layer': False})
 

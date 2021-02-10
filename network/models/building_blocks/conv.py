@@ -70,7 +70,7 @@ class Conv(nn.Module):
 
     def get_conv_output(self, shape):
         """
-           By inputing the shape of the input, simulate what is the ouputsize.
+           By passing the shape of the input, simulate what is the output size.
         """
 
         bs = 1

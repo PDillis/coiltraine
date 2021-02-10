@@ -2,7 +2,7 @@ import os
 import glob
 import traceback
 import collections
-import sys
+
 import math
 import copy
 import json
@@ -197,7 +197,7 @@ class CoILDataset(Dataset):
             measurements['steer'] = 0.0
             measurements['throttle'] = 0.0
             measurements['brake'] = 0.0
-            measurements['rgb'] = np.zeros(3, 88, 200)  # TODO: This is hardcoded, should be able to read the image size
+            measurements['rgb'] = np.zeros(g_conf.SENSORS['rgb'])
 
         return measurements
 
@@ -206,7 +206,7 @@ class CoILDataset(Dataset):
         # If the measurement data is not removable it's because it's part of this experiment dataa
         return not self._check_remove_function(measurement_data, self._remove_params)
 
-    def _get_final_measurement(self, speed, measurement_data, angle, available_measurements_dict):
+    def _get_final_measurement(self, speed, measurement_data, angle):
         """
         Function to load the measurement with a certain angle and augmented direction.
         Also, it will choose if the brake is going to be present or if acceleration -1,1 is the default.
@@ -218,48 +218,17 @@ class CoILDataset(Dataset):
             measurement_augmented = self.augment_measurement(copy.copy(measurement_data),
                                                              angle,
                                                              3.6 * speed,
-                                                             steer_name=available_measurements_dict['steer'])
+                                                             'steer')  # TODO: This works as long as nothing is renamed
         else:
             # We have to copy since it reference a file.
             measurement_augmented = copy.copy(measurement_data)
-        # print(measurement_augmented)
-        # sys.exit(1)
-        # if 'gameTimestamp' in measurement_augmented:
-        #     time_stamp = measurement_augmented['gameTimestamp']
-        # else:
-        #     time_stamp = measurement_augmented['elapsed_seconds']
-
-        # final_measurement = {}
-        # We go for every available measurement, previously tested
-        # and update for the measurements vec that is used on the training.
-        # for measurement, name_in_dataset in available_measurements_dict.items():
-            # This is mapping the name of measurement in the target dataset
-            # final_measurement.update({measurement: measurement_augmented[name_in_dataset]})
 
         # Add now the measurements that actually need some kind of processing
         # final_measurement.update({'speed_module': speed / g_conf.SPEED_FACTOR})
         # final_measurement.update({'directions': directions})
         # final_measurement.update({'game_time': time_stamp})
-        measurement_augmented['forward_speed'] = measurement_data['forward_speed'] / g_conf.SPEED_FACTOR
+        measurement_augmented['speed'] = measurement_data['speed'] / g_conf.SPEED_FACTOR
         return measurement_augmented
-
-    def _add_data_point(self, float_dicts, data_point, camera_angle):
-        """
-        Add a data point to the vector that is the full dataset
-        Args:
-            float_dicts:
-            data_point:
-            camera_angle:
-        Returns:
-        """
-        # Augment the steering if the camera angle is not 0
-        new_data_copy = copy.deepcopy(data_point)
-        if camera_angle != 0:
-            new_data_copy['measurements']['steer'] = self.augment_steering(camera_angle,
-                                                                           new_data_copy['measurements']['steer'],
-                                                                           new_data_copy['measurements']['forward_speed']* 3.6)  # TODO: speed
-            new_data_copy['measurements']['forward_speed'] = data_point['measurements']['forward_speed'] / g_conf.SPEED_FACTOR
-            float_dicts.append(new_data_copy['measurements'])
 
     def _pre_load_image_folders(self, path):
         """
@@ -276,71 +245,11 @@ class CoILDataset(Dataset):
             of dictionaries.
 
         """
-        # sensor_data_names = {}
-        # for sensor in g_conf.SENSORS.keys():
-        #     sensor_data_names[sensor.split('_')[0]] = []
-        #
-        # if path == 'validation':
-        #     jsonfile = g_conf.EXPERIENCE_FILE_VALID  # TODO: set this default and check options for path
-        # else:
-        #     jsonfile = g_conf.EXPERIENCE_FILE
-        #
-        # # We check one image at least to see if it matches the size expected by the network
-        # checked_image = True
-        # float_dicts = []
-        # env_batch = CEXP(jsonfile, params=None, execute_all=True, ignore_previous_execution=True)
-        # # We start the server without docker
-        # env_batch.start(no_server=True, agent_name='Agent')
-        #
-        # # We count the environments that are read
-        # for env in env_batch:
-        #     print(f'Container name: {env}')
-        #     try:
-        #         env_data = env.get_data()
-        #     except NoDataGenerated:
-        #         print('\tNo data generated for this environment.')
-        #         sys.exit(1)
-        #
-        #     for exp in env_data:
-        #         print(f'\tClient: {exp[1]}')
-        #         for batch in exp[0]:
-        #             print(f'\t\tBatch: {batch[1]} of length {len(batch[0])}')
-        #             for data_point in batch[0]:
-        #                 # Delete some non-floatable cases
-        #                 try:
-        #                     del data_point['measurements']['ego_actor']
-        #                     del data_point['measurements']['opponents']
-        #                     del data_point['measurements']['lane']
-        #                     del data_point['measurements']['hand_brake']
-        #                     del data_point['measurements']['reverse']  # TODO: check compatibility with current data
-        #                 except NameError:
-        #                     pass
-        #
-        #                 self._add_data_point(float_dicts, data_point, 0.0)
-        #                 if g_conf.AUGMENT_LATERAL_STEERINGS > 0.0:
-        #                     self._add_data_point(float_dicts, data_point, -30.0)
-        #                     self._add_data_point(float_dicts, data_point, 30.0)
-        #
-        #                 for sensor in g_conf.SENSORS.keys():
-        #                     if not checked_image:
-        #                         if not check_size(data_point[sensor], g_conf.SENSORS[sensor]):
-        #                             raise RuntimeError('Unexpected image size for the network!')
-        #                         checked_image = True
-        #
-        #                     sensor_data_names[sensor.split('_')[0]].append(data_point[sensor])
-        #                     if g_conf.AUGMENT_LATERAL_STEERINGS > 0.0:
-        #                         sensor_data_names[sensor.split('_')[0]].append(
-        #                             data_point[sensor.split('_')[0]+'_left'])
-        #                         sensor_data_names[sensor.split('_')[0]].append(
-        #                             data_point[sensor.split('_')[0] + '_right'])
-
-
-        # ==================================
-        containers_list = glob.glob(os.path.join(path, '*route*'))  # TODO: now episode_* is Container_*
+        containers_list = glob.glob(os.path.join(path, 'Container_*'))
         sort_nicely(containers_list)
         # Do a check if the episodes list is empty
         if len(containers_list) == 0:
-            raise ValueError(f"There are no episodes on the training dataset folder: {path}")
+            raise ValueError(f"There are no containers on the training dataset folder: {path}")
 
         # We will check one image to see if it matches the size expected by the network
         checked_image = False
@@ -352,25 +261,25 @@ class CoILDataset(Dataset):
         # Now we do a check to try to find all the
         for container in containers_list:
             print(f'Container name: {container}')
-            available_measurements_dict = data_parser.check_available_measurements(container)
             if number_of_hours_pre_loaded > g_conf.NUMBER_OF_HOURS:
                 # The number of wanted hours achieved
                 break
-            client_list = glob.glob(os.path.join(container, '**/0'))  # TODO: Client_*
+            # A simple count to keep track how many measurements were added this episode.
+            count_added_measurements = 0
+            # We may have more than one client for each container, so the data_point_number might clash later
+            client_list = glob.glob(os.path.join(container, '**/Client_*'), recursive=True)
+
             for client in client_list:
                 # Get all the measurements from this client
-                measurements_list = glob.glob(os.path.join(client, 'measurements*'), recursive=True)  # TODO: can_bus*
+                measurements_list = glob.glob(os.path.join(client, 'can_bus*'))
                 sort_nicely(measurements_list)
 
                 if len(measurements_list) == 0:
                     print("Empty client")
                     continue
 
-                # A simple count to keep track how many measurements were added this episode.
-                count_added_measurements = 0
-
                 for measurement in tqdm(measurements_list):
-                    data_point_number = measurement.split('_')[-1].split('.')[0]  # /path/to/measurements_0019.json => 0019
+                    data_point_number = os.path.splitext(measurement)[0][-6:]  # /pth/to/can_bus000019.json => 000019
                     with open(measurement) as f:
                         measurement_data = json.load(f)
                     # Delete some non-floatable cases
@@ -379,8 +288,11 @@ class CoILDataset(Dataset):
                         del measurement_data['opponents']
                         del measurement_data['lane']
                         del measurement_data['hand_brake']
-                        del measurement_data['reverse']  # TODO: check compatibility with current data
-                    except NameError:
+                        del measurement_data['reverse']  # TODO: not relevant now, but we might be interested later on
+                        del measurement_data['ego_position']
+                        del measurement_data['route_nodes_xyz']
+                        del measurement_data['route_nodes']
+                    except (KeyError, NameError):
                         pass
                     # depending on the configuration file, we eliminated the kind of measurements
                     # that are not going to be used for this experiment
@@ -388,62 +300,35 @@ class CoILDataset(Dataset):
                     speed = data_parser.get_speed(measurement_data)
 
                     for sensor in g_conf.SENSORS.keys():
-
-                        final_measurement = self._get_final_measurement(speed, measurement_data, 0,
-                                                                        available_measurements_dict)
-
+                        # We will go through each of the cameras
+                        cameras = (('central', 0), ('left', -30.0), ('right', 30.0))
                         sensor_name = sensor.split('_')[0]
-                        if self.is_measurement_part_of_experiment(final_measurement):
-                            float_dicts.append(final_measurement)
-                            rgb = glob.glob(os.path.join(container, f'**/rgb_central{data_point_number}.png'),
-                                            recursive=True)[0]  # TODO: we have multiple clients with same image name
-                            if not checked_image:
-                                if not check_size(rgb, g_conf.SENSORS[sensor]):
-                                    raise RuntimeError('Unexpected image size for the network!')
-                                checked_image = True
+                        for cam in cameras:
+                            # We do measurements for the three cameras
+                            # We convert the speed to KM/h for the augmentation
+                            # We extract the interesting subset from the measurement dict
+                            final_measurement = self._get_final_measurement(speed, measurement_data, cam[1])
+                            if self.is_measurement_part_of_experiment(final_measurement):
+                                float_dicts.append(final_measurement)
+                                sensor_path = glob.glob(
+                                    os.path.join(client, f'**/{sensor_name}_{cam[0]}{data_point_number}.png'),
+                                    recursive=True)
+                                if len(sensor_path) == 0:
+                                    continue
+                                if not checked_image:
+                                    if not check_size(*sensor_path, g_conf.SENSORS[sensor]):
+                                        raise RuntimeError('Unexpected image size for the network!')
+                                    checked_image = True
 
-                            if sensor_name in sensor_data_names:
-                                sensor_data_names[sensor_name].append(rgb)
-                            else:
-                                sensor_data_names[sensor_name] = [rgb]
-                            count_added_measurements += 1
-
-                        # We do measurements for the left side camera
-                        # We convert the speed to KM/h for the augmentation
-                        # We extract the interesting subset from the measurement dict
-                        final_measurement = self._get_final_measurement(speed, measurement_data, -30.0,
-                                                                        available_measurements_dict)
-                        if self.is_measurement_part_of_experiment(final_measurement):
-                            float_dicts.append(final_measurement)
-                            rgb = glob.glob(os.path.join(container, f'**/rgb_left{data_point_number}.png'),
-                                            recursive=True)[0]  # TODO: we have multiple clients with same image name
-
-                            if sensor_name in sensor_data_names:
-                                sensor_data_names[sensor_name].append(rgb)
-                            else:
-                                sensor_data_names[sensor_name] = [rgb]
-                            count_added_measurements += 1
-
-                        # We do measurements augmentation for the right side cameras
-
-                        final_measurement = self._get_final_measurement(speed, measurement_data, 30.0,
-                                                                        available_measurements_dict)
-
-                        if self.is_measurement_part_of_experiment(final_measurement):
-                            float_dicts.append(final_measurement)
-                            rgb = glob.glob(os.path.join(container, f'**/rgb_right{data_point_number}.png'),
-                                            recursive=True)[0]  # TODO: we have multiple clients with same image name
-
-                            if sensor_name in sensor_data_names:
-                                sensor_data_names[sensor_name].append(rgb)
-                            else:
-                                sensor_data_names[sensor_name] = [rgb]
-                            count_added_measurements += 1
+                                if sensor_name in sensor_data_names:
+                                    sensor_data_names[sensor_name].append(*sensor_path)
+                                else:
+                                    sensor_data_names[sensor_name] = [*sensor_path]
+                                count_added_measurements += 1
 
             # Check how many hours were actually added
-            number_of_hours_pre_loaded += (float(count_added_measurements / 20.0) / 3600.0)  # TODO: add FPS to config?
+            number_of_hours_pre_loaded += (float(count_added_measurements / g_conf.TRAIN_DATA_FPS) / 3600.0)
             print(f"Loaded {number_of_hours_pre_loaded} hours of data")
-        # ==================================
 
         # Make the path to save the pre loaded datasets
         if not os.path.exists('_preloads'):
@@ -573,4 +458,3 @@ class CoILDataset(Dataset):
             inputs_vec.append(data[input_name])
 
         return torch.cat(inputs_vec, 1)
-
