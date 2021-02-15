@@ -25,9 +25,13 @@ def forward_speed(measurement_data):
 
 
 def get_speed(measurement_data):
-    """ Extract the proper speed from the measurement data dict. This will come from a {measurements/can_bus_%6d.json."""
-    if 'forward_speed' in measurement_data:  # TODO: forward_speed is now just speed
-        return measurement_data['forward_speed']  # TODO: forward_speed is now just speed
+    """
+    Extract the proper speed from the measurement data dict. This will come from a {measurements/can_bus_%6d.json.
+    """
+    if 'forward_speed' in measurement_data:
+        return measurement_data['forward_speed']
+    elif 'speed' in measurement_data:
+        return measurement_data['speed']
     elif 'ego_actor' in measurement_data:  # We have a 0.9.X data here; TODO: we should save this in TM data
         return forward_speed(measurement_data)
     else:  # If the forward speed is not on the dataset it is because speed is zero.

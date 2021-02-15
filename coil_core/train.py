@@ -94,7 +94,8 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         # can be found
         dataset = CoILDataset(full_dataset,
                               transform=augmenter,
-                              preload_name=f'{g_conf.NUMBER_OF_HOURS}hours_{g_conf.TRAIN_DATASET_NAME}')
+                              preload_name=f'{g_conf.NUMBER_OF_HOURS}h_{g_conf.TRAIN_DATASET_NAME}',
+                              process_type='train')
         print("=>Loaded dataset")
 
         data_loader = select_balancing_strategy(dataset, iteration, number_of_workers)
@@ -131,10 +132,10 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                     Main optimization loop
                 ####################################
             """
-
             iteration += 1
+
             if iteration % 1000 == 0:
-                adjust_learning_rate_auto(optimizer, loss_window)
+                adjust_learning_rate_auto(optimizer, loss_window, coil_logger)
 
             # get the control commands from float_data, size = [120,1]
 
@@ -183,11 +184,9 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                                      'Images/s': (iteration * g_conf.BATCH_SIZE) / accumulated_time,
                                      'BestLoss': best_loss, 'BestLossIteration': best_loss_iter,
                                      'Output': output[position].data.tolist(),
-                                     'GroundTruth': dataset.extract_targets(data)[
-                                         position].data.tolist(),
+                                     'GroundTruth': dataset.extract_targets(data)[position].data.tolist(),
                                      'Error': error,
-                                     'Inputs': dataset.extract_inputs(data)[
-                                         position].data.tolist()},
+                                     'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
                                     iteration)
             loss_window.append(loss.data.tolist())
             coil_logger.write_on_error_csv('train', loss.data)
@@ -212,7 +211,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                 }
                 torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
             # Let's not print that much to the console
-            if iteration % 250 == 0:
+            if iteration % 100 == 0:
                 print(console_message)
         print(20*'#')
         print(' Finished training!')

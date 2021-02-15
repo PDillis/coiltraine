@@ -61,9 +61,7 @@ def select_data_sequence(control, selected_data):
 
         The valid keys
     """
-
     break_sequence = False
-
 
     count = 0
     del_pos = []
@@ -114,7 +112,6 @@ def label_split(labels, keys, selected_data):
     Returns:
 
     """
-
     keys_for_divison = []  # The set of all possible keys for each division
     sorted_steering_division = []
     if isinstance(selected_data, list):
@@ -144,15 +141,13 @@ def label_split(labels, keys, selected_data):
 def float_split(output_to_split, keys, percentiles):
     """
     Split data based on the the float value of some variable.
-    Everything is splitted with respect to the percentages.
+    Everything is split with respect to the percentages.
 
     Arguments :
 
     """
-
-
-    # We use this keys to grab the steerings we want... divided into groups
-    # TODO: Test the spliting based on median.
+    # We use this keys to grab the steering we want... divided into groups
+    # TODO: Test the splitting based on median.
     #print ('Start keys ',keys)
     keys_ordered, average_outputs = order_sequence(output_to_split, keys)
 
@@ -167,7 +162,6 @@ def float_split(output_to_split, keys, percentiles):
     else:
         splitted_keys = []
 
-
     return splitted_keys
 
 
@@ -177,7 +171,7 @@ def float_split(output_to_split, keys, percentiles):
 def remove_angle_traffic_lights(data, positions_dict):
     # will return all the keys that does not contain the expression.
 
-    return (data['angle'] == positions_dict['angle'] and data['traffic_lights']!=positions_dict['traffic_lights'])
+    return data['angle'] == positions_dict['angle'] and data['traffic_lights'] != positions_dict['traffic_lights']
 
 
 def remove_angle(data, positions_dict):
@@ -198,23 +192,20 @@ def remove_traffic_lights(data, positions_dict):
 
 ####################### SPLITTING FUNCTIONS #########################
 
+
 def split_sequence(data, var, positions):
 
     # positions will start as something like 3,9,17
-    print (data)
-    print (var)
-    print (positions)
+    print(data)
+    print(var)
+    print(positions)
     keys = [np.where(data[var] <= positions[var][0])[0]]
 
-
-
     for i in range(len(positions[var])-1):
-        print (data[var] )
-        print ( positions[var][i], positions[var][i+1])
+        print(data[var] )
+        print(positions[var][i], positions[var][i+1])
         keys.append(np.where(
             np.logical_and(data[var] > positions[var][i], data[var] <= positions[var][i + 1]))[0])
-
-
 
     keys.append(np.where(data[var] > positions[var][-1])[0])
 
@@ -231,10 +222,8 @@ def convert_measurements(measurements):
         for key, value in data_point.items():
             conv_measurements[key].append(value)
 
-
     for key in conv_measurements.keys():
         conv_measurements[key] = np.array(conv_measurements[key])
-
 
     return conv_measurements
 
@@ -248,33 +237,33 @@ def split_speed_module(data, positions):
     data = convert_measurements(data)
     return split_sequence(data, 'speed_module', positions)
 
+
 def split_speed_module_throttle(data, positions_dict):
     data = convert_measurements(data)
     keys = [np.where(np.logical_and(data['speed_module'] < positions_dict['speed_module'][0],
-                                                           data['throttle'] > positions_dict['throttle'][0]))[0],
-                         np.where(np.logical_or(np.logical_and(data['speed_module'] < positions_dict['speed_module'][0],
-                                                           data['throttle'] <= positions_dict['throttle'][0]),
-                                                data['speed_module'] >= positions_dict['speed_module'][0]))[0]
-             ]
+                                    data['throttle'] > positions_dict['throttle'][0]))[0],
+            np.where(np.logical_or(np.logical_and(data['speed_module'] < positions_dict['speed_module'][0],
+                                                  data['throttle'] <= positions_dict['throttle'][0]),
+                                   data['speed_module'] >= positions_dict['speed_module'][0]))[0]]
 
     return keys
+
 
 def split_pedestrian_vehicle_traffic_lights_move(data, positions_dict):
     data = convert_measurements(data)
     keys = [np.where(np.logical_and(data['pedestrian'] < 1.0,
                                     data['pedestrian'] > 0.))[0],
             np.where(data['pedestrian'] == 0.)[0],
-            np.where(data['vehicle'] < 1. )[0],
+            np.where(data['vehicle'] < 1.)[0],
             np.where(np.logical_and(data['traffic_lights'] < 1.0, data['speed_module'] >= 0.0666))[0],
             np.where(np.logical_and(np.logical_and(data['pedestrian'] == 1.,
                                                    data['vehicle'] == 1.),
                                     np.logical_or(data['traffic_lights'] == 1.,
-                                                   np.logical_and(data['traffic_lights'] < 1.0,
-                                                                  data['speed_module'] < 0.066)
+                                                  np.logical_and(data['traffic_lights'] < 1.0,
+                                                                 data['speed_module'] < 0.066)
                                                   )
                                     )
                      )[0]
-
             ]
     return keys
 
@@ -284,18 +273,17 @@ def split_pedestrian_vehicle_traffic_lights(data, positions_dict):
     keys = [np.where(np.logical_and(data['pedestrian'] < 1.0,
                                     data['pedestrian'] > 0.))[0],
             np.where(data['pedestrian'] == 0.)[0],
-            np.where(data['vehicle'] < 1. )[0],
+            np.where(data['vehicle'] < 1.)[0],
             np.where(data['traffic_lights'] < 1.0)[0],
             np.where(np.logical_and(np.logical_and(data['pedestrian'] == 1.,
                                                    data['vehicle'] == 1.),
-                                     data['traffic_lights'] == 1.))[0]
-
+                                    data['traffic_lights'] == 1.))[0]
             ]
     return keys
 
+
 def split_lateral_noise_longitudinal_noise(data, positions_dict):
     data = convert_measurements(data)
-
 
     keys = [np.where(data['steer'] != data['steer_noise'])[0],
             np.where(np.logical_or(data['throttle'] != data['throttle_noise'],
@@ -309,11 +297,9 @@ def split_lateral_noise_longitudinal_noise(data, positions_dict):
 
 def split_left_central_right(data, positions_dict):
     data = convert_measurements(data)
-
-
     keys = [np.where(data['angle'] == -30.)[0],
-            np.where(data['angle'] == 0. )[0],
-            np.where(data['angle'] == 30.) [0]
+            np.where(data['angle'] == 0.)[0],
+            np.where(data['angle'] == 30.)[0]
             ]
     return keys
 
@@ -322,10 +308,8 @@ def split_left_central_right(data, positions_dict):
 
 
 def get_boost_pedestrian_vehicle_traffic_lights(data, key, positions_dict):
-
     boost = 0
-
-    #print (data['pedestrian'][key])
+    # print (data['pedestrian'][key])
     if 0 < data[key]['pedestrian'] < 1.0:
         boost += positions_dict['boost'][0]
 
@@ -333,14 +317,12 @@ def get_boost_pedestrian_vehicle_traffic_lights(data, key, positions_dict):
         boost += positions_dict['boost'][1]
 
     if data[key]['vehicle'] < 1.:
-        boost +=  positions_dict['boost'][2]
+        boost += positions_dict['boost'][2]
 
-    if data[key]['pedestrian'] == 1.0 and data[key]['vehicle'] == 1. and data[key]['traffic_lights'] == 1. :
+    if data[key]['pedestrian'] == 1.0 and data[key]['vehicle'] == 1. and data[key]['traffic_lights'] == 1.:
         boost += positions_dict['boost'][3]
 
     return boost
-
-
 
 
 def parse_split_configuration(configuration):
@@ -363,16 +345,15 @@ def parse_split_configuration(configuration):
 def get_inverse_freq_weights(keys, dataset_size):
 
     invers_freq_weights = []
-    print (" frequency")
+    print(" frequency")
     for key_vec in keys:
-        print ((len(key_vec)/dataset_size))
+        print((len(key_vec)/dataset_size))
         invers_freq_weights.append((len(key_vec)/dataset_size))
 
     return softmax(np.array(invers_freq_weights))
 
 
-# TODO: for now is not possible to maybe balance just labels or just steering.
-# TODO: Is either all or nothing
+# TODO: for now is not possible to maybe balance just labels or just steering; s either all or nothing
 def select_balancing_strategy(dataset, iteration, number_of_workers):
 
     # Creates the sampler, this part is responsible for managing the keys. It divides
@@ -381,19 +362,18 @@ def select_balancing_strategy(dataset, iteration, number_of_workers):
     keys = range(0, len(dataset) - g_conf.NUMBER_IMAGES_SEQUENCE)
 
     # In the case we are using the balancing
-    if g_conf.SPLIT is not None and g_conf.SPLIT is not "None":
+    if eval(str(g_conf.SPLIT)) is not None:
         name, params = parse_split_configuration(g_conf.SPLIT)
         splitter_function = getattr(sys.modules[__name__], name)
-        keys_splitted = splitter_function(dataset.measurements, params)
+        keys_split = splitter_function(dataset.measurements, params)
 
-        for i in range(len(keys_splitted)):
-            keys_splitted[i] = np.array(list(set(keys_splitted[i]).intersection(set(keys))))
+        for i in range(len(keys_split)):
+            keys_split[i] = np.array(list(set(keys_split[i]).intersection(set(keys))))
         if params['weights'] == 'inverse':
-            weights = get_inverse_freq_weights(keys_splitted, len(dataset.measurements)
-                                               - g_conf.NUMBER_IMAGES_SEQUENCE)
+            weights = get_inverse_freq_weights(keys_split, len(dataset.measurements) - g_conf.NUMBER_IMAGES_SEQUENCE)
         else:
             weights = params['weights']
-        sampler = PreSplittedSampler(keys_splitted, iteration * g_conf.BATCH_SIZE, weights)
+        sampler = PreSplittedSampler(keys_split, iteration * g_conf.BATCH_SIZE, weights)
     else:
         sampler = RandomSampler(keys, iteration * g_conf.BATCH_SIZE)
 

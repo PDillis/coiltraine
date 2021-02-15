@@ -1,5 +1,5 @@
 ####General Configuration Parameters####
-SAVE_SCHEDULE: range(0, 50001, 2000) # The iterations where training checkpoints are going to be saved
+SAVE_SCHEDULE: range(0, 5001, 1000) # The iterations where training checkpoints are going to be saved
 NUMBER_OF_LOADING_WORKERS: 12   # Number of threads used in the data loader
 MAGICAL_SEED: 26957017
 
@@ -10,8 +10,8 @@ SENSORS:
   rgb: [3, 300, 400] # A RGB input sensor with three channels that is resized to 200x88 (central camera)
 MEASUREMENTS:
   float_data: [31]  # Number of float data that must be read from the dataset
-BATCH_SIZE: 60
-NUMBER_ITERATIONS: 50001
+BATCH_SIZE: 16
+NUMBER_ITERATIONS: 5001
 TARGETS: ['steer', 'throttle', 'brake']  # From the float data, the ones that the network should estimate
 INPUTS: ['speed'] # From the float data, the ones that are input to the neural network
 NUMBER_FRAMES_FUSION: 1  # Number of frames fused
@@ -19,13 +19,13 @@ NUMBER_IMAGES_SEQUENCE: 1  # Number of frames sent in sequence
 SEQUENCE_STRIDE: 1  # Number of frames skipped when reading the data
 AUGMENT_LATERAL_STEERINGS: 6  # Depending on this value there is a constant multiplying lateral steers
 SPEED_FACTOR: 12.0  # The constant that is divides the speed_module in order to make it from 0-1
-TRAIN_DATASET_NAME: '1h_dataset_Epic'  # The name of the training dataset used. Must be inside COIL_DATASET_PATH folder
+TRAIN_DATASET_NAME: '1h_dataset_Low'  # The name of the training dataset used. Must be inside COIL_DATASET_PATH folder
 TRAIN_DATA_FPS: 20  # FPS of the saved dataset
 AUGMENTATION: None  # The image augmentation applied on every input image
 DATA_USED: 'all'  # The part of the data to be used
 USE_NOISE_DATA: False  # If we use the noise data.
 NUMBER_OF_HOURS: 1  # Number of hours to be taken from the input data
-EXPERIENCE_FILE: '/home/dporres/Documents/code/cexp/database/1h_dataset_Epic.json'
+EXPERIENCE_FILE: '/home/dporres/Documents/code/cexp/database/1h_dataset_Low.json'
 
 #### Testing Related Parameters ####
 TEST_SCHEDULE: range(100000, 100001, 100000)  # The frequency the model is actually tested.
@@ -37,7 +37,7 @@ PRE_TRAINED: False
 MODEL_CONFIGURATION:  # Based on the MODEL_TYPE, we specify the structure
   perception:  # The module that process the image input, it ouputs the number of classes
     res:
-      name: 'resnet34'
+      name: 'resnet50'
       num_classes: 512
 
   measurements:

@@ -1,11 +1,9 @@
-from torch.nn import functional as F
 import torch
 
 
 def normalize(x, dim):
     x_normed = x / x.max(dim, keepdim=True)[0]
     return x_normed
-
 
 
 def weight_decay_l1(loss, model, intention_factors, alpha, gating):
@@ -54,6 +52,7 @@ def weight_decay_l2(loss, model, intention_factors, alpha, gating):
 
 def compute_branches_masks(controls, number_targets):
     """
+    A vector with a mask for each of the control branches
         Args
             controls
             the control values that have the following structure
@@ -64,8 +63,6 @@ def compute_branches_masks(controls, number_targets):
             a mask to have the loss function applied
             only on over the correct branch.
     """
-
-    """ A vector with a mask for each of the control branches"""
     controls_masks = []
 
     # when command = 2, branch 1 (follow lane) is activated
@@ -89,8 +86,8 @@ def compute_branches_masks(controls, number_targets):
     controls_b4 = torch.cat([controls_b4] * number_targets, 1)
     controls_masks.append(controls_b4)
 
-
     return controls_masks
+
 
 def l2_loss(params):
     """
@@ -129,7 +126,7 @@ def l1_loss(params):
                 branches: The tensor containing all the branches branches output from the network
                 targets: The ground truth targets that the network should produce
                 controls_mask: the masked already expliciting the branches tha are going to be used
-                branches weights: the weigths that each branch will have on the loss function
+                branches weights: the weights that each branch will have on the loss function
                 speed_gt: the ground truth speed for these data points
 
         Returns
@@ -138,14 +135,12 @@ def l1_loss(params):
     """
     """ It is a vec for each branch"""
     loss_branches_vec = []
-    # TODO This is hardcoded but all our cases rigth now uses four branches
+    # TODO This is hardcoded but all our cases right now uses four branches
     for i in range(len(params['branches']) -1):
-        loss_branches_vec.append(torch.abs((params['branches'][i] - params['targets'])
-                                           * params['controls_mask'][i])
+        loss_branches_vec.append(torch.abs((params['branches'][i] - params['targets']) * params['controls_mask'][i])
                                  * params['branch_weights'][i])
     """ The last branch is a speed branch"""
     # TODO: Activate or deactivate speed branch loss
-    loss_branches_vec.append(torch.abs(params['branches'][-1] - params['inputs'])
-                             * params['branch_weights'][-1])
+    loss_branches_vec.append(torch.abs(params['branches'][-1] - params['inputs']) * params['branch_weights'][-1])
     return loss_branches_vec, {}
 

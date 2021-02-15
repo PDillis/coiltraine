@@ -19,9 +19,9 @@ from torch.utils.data import Dataset
 from . import splitter
 from . import data_parser
 
-# from cexp.cexp import CEXP
-# from cexp.env.scenario_identification import identify_scenario
-# from cexp.env.environment import NoDataGenerated
+from cexp.cexp import CEXP
+from cexp.env.scenario_identification import identify_scenario
+from cexp.env.environment import NoDataGenerated
 
 # TODO: Warning, maybe this does not need to be included everywhere.
 from configs import g_conf
@@ -54,19 +54,19 @@ def parse_remove_configuration(configuration):
     return name, config_dict
 
 
-# def convert_scenario_name_number(measurements):
-#     scenario = identify_scenario(measurements['distance_intersection'],
-#                                  measurements['road_angle'])
-#     if scenario == 'S0_lane_following':
-#         return [1, 0, 0, 0]
-#     elif scenario == 'S1_lane_following_curve':
-#         return [0, 1, 0, 0]
-#     elif scenario == 'S2_before_intersection':
-#         return [0, 0, 1, 0]
-#     elif scenario == 'S3_intersection':
-#         return [0, 0, 0, 1]
-#     else:
-#         raise ValueError(f'Unexpected scenario identified: {scenario}')
+def convert_scenario_name_number(measurements):
+    scenario = identify_scenario(measurements['distance_intersection'],
+                                 measurements['road_angle'])
+    if scenario == 'S0_lane_following':
+        return [1, 0, 0, 0]
+    elif scenario == 'S1_lane_following_curve':
+        return [0, 1, 0, 0]
+    elif scenario == 'S2_before_intersection':
+        return [0, 0, 1, 0]
+    elif scenario == 'S3_intersection':
+        return [0, 0, 0, 1]
+    else:
+        raise ValueError(f'Unexpected scenario identified: {scenario}')
 
 
 def encode_directions(directions):
@@ -90,18 +90,18 @@ def check_size(img_filename, size):
 def get_episode_weather(episode):
     with open(os.path.join(episode, 'metadata.json')) as f:
         metadata = json.load(f)
-    print(" WEATHER OF EPISODE ", metadata['weather'])
+    # print(" WEATHER OF EPISODE ", metadata['weather'])
     return int(metadata['weather'])
 
 
 class CoILDataset(Dataset):
     """ The conditional imitation learning dataset"""
 
-    def __init__(self, root_dir, transform=None, preload_name=None):
+    def __init__(self, root_dir, transform=None, preload_name=None, process_type=None):
         # Setting the root directory for this dataset
         self.root_dir = root_dir
         # We add to the preload name all the remove labels
-        if g_conf.REMOVE is not None and g_conf.REMOVE is not "None":
+        if eval(str(g_conf.REMOVE)) is not None:
             name, self._remove_params = parse_remove_configuration(g_conf.REMOVE)
             self.preload_name = f'{preload_name}_{name}'
             self._check_remove_function = getattr(splitter, name)
@@ -116,14 +116,14 @@ class CoILDataset(Dataset):
             print(f"Loading from NPY: {preload_path}")
             self.sensor_data_names, self.measurements = np.load(preload_path, allow_pickle=True)
             for key in self.sensor_data_names.keys():
-                print(f'\t======> {key} images: {len(self.sensor_data_names[key])}')
-            print(f'\t======> measurements: {len(self.measurements)}')
+                print(f'\t======> Total {key} images: {len(self.sensor_data_names[key])}')
+            print(f'\t======> Total measurements: {len(self.measurements)}')
         else:
             print('Creating NPY preload...')
-            self.sensor_data_names, self.measurements = self._pre_load_image_folders(root_dir)
+            self.sensor_data_names, self.measurements = self._pre_load_image_folders(root_dir, process_type)
             for key in self.sensor_data_names.keys():
-                print(f'\t======> {key} images: {len(self.sensor_data_names[key])}')
-            print(f'\t======> measurements: {len(self.measurements)}')
+                print(f'\t======> Total {key} images: {len(self.sensor_data_names[key])}')
+            print(f'\t======> Total measurements: {len(self.measurements)}')
 
         self.transform = transform
         self.batch_read_number = 0
@@ -188,8 +188,7 @@ class CoILDataset(Dataset):
 
         except AttributeError:
             traceback.print_exc()
-            print("Blank image")
-
+            print("Blank image!")
             measurements = self.measurements[0].copy()
             for k, v in measurements.items():
                 v = torch.from_numpy(np.asarray([v, ]))
@@ -206,6 +205,146 @@ class CoILDataset(Dataset):
         # If the measurement data is not removable it's because it's part of this experiment dataa
         return not self._check_remove_function(measurement_data, self._remove_params)
 
+    @staticmethod
+    def augment_steering(camera_angle, steer, speed):
+        """
+            Apply the steering physical equation to augment for the lateral cameras steering
+        Args:
+            camera_angle: the angle of the camera
+            steer: the central steering
+            speed: the speed that the car is going
+
+        Returns:
+            the augmented steering
+
+        """
+        time_use = 1.0
+        car_length = 6.0
+
+        pos = camera_angle > 0.0
+        neg = camera_angle <= 0.0
+        # You should use the absolute value of speed
+        speed = math.fabs(speed)
+        rad_camera_angle = math.radians(math.fabs(camera_angle))
+        val = g_conf.AUGMENT_LATERAL_STEERINGS * (
+            math.atan((rad_camera_angle * car_length) / (time_use * speed + 0.05))) / 3.1415
+        steer -= pos * min(val, 0.3)
+        steer += neg * min(val, 0.3)
+
+        steer = min(1.0, max(-1.0, steer))
+
+        # print('Angle', camera_angle, ' Steer ', old_steer, ' speed ', speed, 'new steer', steer)
+        return steer
+
+    def _add_data_point(self, float_dicts, data_point, camera_angle):
+        """
+        Add a data point to the vector that is the full dataset
+        Args:
+            float_dicts:
+            data_point:
+            camera_angle: the augmentation angle to be applied to the steering
+        Returns:
+        """
+        new_data_copy = copy.deepcopy(data_point)
+        # If angle is not 0, use the augment_steering function
+        if camera_angle != 0:
+            # Convert the speed from m/s to km/h ???
+            new_data_copy['measurements']['steer'] = self.augment_steering(camera_angle,
+                                                                           new_data_copy['measurements']['steer'],
+                                                                           new_data_copy['measurements']['speed'] * 3.6)
+
+        new_data_copy['measurements']['speed'] = data_point['measurements']['speed'] / g_conf.SPEED_FACTOR  # normalize
+        float_dicts.append(new_data_copy['measurements'])
+
+    def _pre_load_image_folders(self, path, process_type):
+        """
+        The old function (below) was too slow to preload the dataset. Hence, we will use C-EXP since we will be able to
+        load the data path and image information much faster by using the GPU.
+        Args:
+            path: dataset path
+            process_type: 'training' or 'validation'
+        Returns:
+            sensor_data_names: vector containing each sensor modality ('rgb', 'lidar', etc.) containing the paths to the
+            sensors or cameras in the case for rgb images
+            float_dicts: dictionary containing the float data for each of these sensors
+        """
+        # Empty dicts and vector to append the data we will return
+        sensor_data_names = {}
+        float_dicts = []
+
+        for sensor in g_conf.SENSORS.keys():
+            # We will have 'rgb_central', 'rgb_right', etc., so we just care for the type of sensor, i.e., 'rgb'
+            sensor_data_names[sensor.split('_')[0]] = []
+
+        if process_type == 'validation':
+            experience_json = g_conf.EXPERIENCE_FILE_VALID
+        elif process_type == 'train':
+            experience_json = g_conf.EXPERIENCE_FILE
+        else:
+            raise Exception("Invalid name for process_type, chose from (train, validation)")
+
+        # We will check one image to see if it is what the network expects
+        checked_image = False
+
+        container_batch = CEXP(experience_json, params=None, execute_all=True, ignore_previous_execution=True)
+        # Start the server without Docker
+        container_batch.start(no_server=True, agent_name='Client')
+
+        for container in container_batch:
+            print(f'Container name: {container}')
+            try:
+                container_data = container.get_data()  # Returns a way to read all the data properly
+            except NoDataGenerated:
+                print("No data generated for this container!")
+            else:
+                for client in container_data:  # Client_354, Client_355, ....
+                    for data in client[0]:
+                        for data_point in data[0]:
+                            # We delete non-float cases; will depend on the data that has been saved (see can_bus.json)
+                            del data_point['measurements']['hand_brake']
+                            del data_point['measurements']['reverse']
+                            del data_point['measurements']['ego_position']
+                            del data_point['measurements']['route_nodes_xyz']
+                            del data_point['measurements']['route_nodes']
+
+                            self._add_data_point(float_dicts, data_point, 0)  # Central camera
+                            if g_conf.AUGMENT_LATERAL_STEERINGS > 0:
+                                self._add_data_point(float_dicts, data_point, -30)  # left camera
+                                self._add_data_point(float_dicts, data_point, 30)
+
+                            for sensor in g_conf.SENSORS.keys():
+                                # check one image
+                                if not checked_image:
+                                    if not check_size(data_point[f'{sensor}_central'], g_conf.SENSORS[sensor]):
+                                        raise RuntimeError('Image size mismatch for configuration and training data!')
+                                    checked_image = True
+
+                                # Add paths for central, left, and right sensors (if there are augmentations)
+                                sensor_data_names[sensor].append(data_point[f'{sensor}_central'])
+                                if g_conf.AUGMENT_LATERAL_STEERINGS > 0:
+                                    sensor_data_names[sensor].append(data_point[f'{sensor}_left'])
+                                    sensor_data_names[sensor].append(data_point[f'{sensor}_right'])
+
+        # Create path for the preloaded NPY files
+        if not os.path.exists('_preloads'):
+            os.mkdir('_preloads')
+        # If there is a name, we save the preloaded data
+        if self.preload_name is not None:
+            np.save(os.path.join('_preloads', self.preload_name), [sensor_data_names, float_dicts])
+
+        return sensor_data_names, float_dicts
+
+    ##### Legacy code #####
+    def augment_measurement(self, measurements, angle, speed, steer_name='steer'):
+        """
+            Augment the steering of a measurement dict
+
+        """
+        new_steer = self.augment_steering(angle, measurements[steer_name],
+                                          speed)
+        measurements[steer_name] = new_steer
+        return measurements
+
     def _get_final_measurement(self, speed, measurement_data, angle):
         """
         Function to load the measurement with a certain angle and augmented direction.
@@ -218,7 +357,7 @@ class CoILDataset(Dataset):
             measurement_augmented = self.augment_measurement(copy.copy(measurement_data),
                                                              angle,
                                                              3.6 * speed,
-                                                             'steer')  # TODO: This works as long as nothing is renamed
+                                                             'steer')
         else:
             # We have to copy since it reference a file.
             measurement_augmented = copy.copy(measurement_data)
@@ -230,7 +369,7 @@ class CoILDataset(Dataset):
         measurement_augmented['speed'] = measurement_data['speed'] / g_conf.SPEED_FACTOR
         return measurement_augmented
 
-    def _pre_load_image_folders(self, path):
+    def _pre_load_image_folders_old(self, path):
         """
         Pre load the image folders for each episode, keep in mind that we only take
         the measurements that we think that are interesting for now.
@@ -283,19 +422,14 @@ class CoILDataset(Dataset):
                     with open(measurement) as f:
                         measurement_data = json.load(f)
                     # Delete some non-floatable cases
-                    try:
-                        del measurement_data['ego_actor']
-                        del measurement_data['opponents']
-                        del measurement_data['lane']
-                        del measurement_data['hand_brake']
-                        del measurement_data['reverse']  # TODO: not relevant now, but we might be interested later on
-                        del measurement_data['ego_position']
-                        del measurement_data['route_nodes_xyz']
-                        del measurement_data['route_nodes']
-                    except (KeyError, NameError):
-                        pass
                     # depending on the configuration file, we eliminated the kind of measurements
                     # that are not going to be used for this experiment
+                    del measurement_data['hand_brake']
+                    del measurement_data['reverse']  # TODO: not relevant now, but we might be interested later on
+                    del measurement_data['ego_position']
+                    del measurement_data['route_nodes_xyz']
+                    del measurement_data['route_nodes']
+
                     # We extract the interesting subset from the measurement dict
                     speed = data_parser.get_speed(measurement_data)
 
@@ -339,6 +473,8 @@ class CoILDataset(Dataset):
 
         return sensor_data_names, float_dicts
 
+    #######################
+
     @staticmethod
     def augment_directions(directions):
 
@@ -347,47 +483,6 @@ class CoILDataset(Dataset):
                 directions = random.choice([3.0, 4.0, 5.0])
 
         return directions
-
-    @staticmethod
-    def augment_steering(camera_angle, steer, speed):
-        """
-            Apply the steering physical equation to augment for the lateral cameras steering
-        Args:
-            camera_angle: the angle of the camera
-            steer: the central steering
-            speed: the speed that the car is going
-
-        Returns:
-            the augmented steering
-
-        """
-        time_use = 1.0
-        car_length = 6.0
-
-        pos = camera_angle > 0.0
-        neg = camera_angle <= 0.0
-        # You should use the absolute value of speed
-        speed = math.fabs(speed)
-        rad_camera_angle = math.radians(math.fabs(camera_angle))
-        val = g_conf.AUGMENT_LATERAL_STEERINGS * (
-            math.atan((rad_camera_angle * car_length) / (time_use * speed + 0.05))) / 3.1415
-        steer -= pos * min(val, 0.3)
-        steer += neg * min(val, 0.3)
-
-        steer = min(1.0, max(-1.0, steer))
-
-        # print('Angle', camera_angle, ' Steer ', old_steer, ' speed ', speed, 'new steer', steer)
-        return steer
-
-    def augment_measurement(self, measurements, angle, speed, steer_name='steer'):
-        """
-            Augment the steering of a measurement dict
-
-        """
-        new_steer = self.augment_steering(angle, measurements[steer_name],
-                                          speed)
-        measurements[steer_name] = new_steer
-        return measurements
 
     def controls_position(self):
         return np.where(self.meta_data[:, 0] == b'control')[0][0]

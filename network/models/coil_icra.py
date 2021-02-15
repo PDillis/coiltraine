@@ -15,7 +15,6 @@ from .building_blocks import Join
 class CoILICRA(nn.Module):
 
     def __init__(self, params):
-        # TODO: Improve the model autonaming function
 
         super(CoILICRA, self).__init__()
         self.params = params
@@ -23,7 +22,7 @@ class CoILICRA(nn.Module):
         number_first_layer_channels = 0
 
         # If we fuse more than one frame, then the first layer will be a concatenation of
-        # the channels of this first layer (e.g., 2 RGB images->3+3=6)
+        # the channels of this first layer [3, w, h] (e.g., 2 RGB images->3+3=6)
         for _, sizes in g_conf.SENSORS.items():
             number_first_layer_channels += sizes[0] * g_conf.NUMBER_FRAMES_FUSION
 
@@ -52,7 +51,7 @@ class CoILICRA(nn.Module):
             resnet_module = importlib.import_module('network.models.building_blocks.resnet')
             resnet_module = getattr(resnet_module, params['perception']['res']['name'])
             self.perception = resnet_module(pretrained=g_conf.PRE_TRAINED,
-                                             num_classes=params['perception']['res']['num_classes'])
+                                            num_classes=params['perception']['res']['num_classes'])
 
             number_output_neurons = params['perception']['res']['num_classes']
 
@@ -82,34 +81,34 @@ class CoILICRA(nn.Module):
                                        'dropouts': params['speed_branch']['fc']['dropouts'] + [0.0],
                                        'end_layer': True})
 
-        # Create the fc vector separatedely
+        # Create the fc vector separately
         branch_fc_vector = []
         for i in range(params['branches']['number_of_branches']):
             branch_fc_vector.append(FC(params={'neurons': [params['join']['fc']['neurons'][-1]] +
-                                                         params['branches']['fc']['neurons'] +
-                                                         [len(g_conf.TARGETS)],
+                                                          params['branches']['fc']['neurons'] + [len(g_conf.TARGETS)],
                                                'dropouts': params['branches']['fc']['dropouts'] + [0.0],
                                                'end_layer': True}))
 
         self.branches = Branching(branch_fc_vector)  # Here we set branching automatically
 
+        # Weight initialization for the convolutional perception modules
         if 'conv' in params['perception']:
             for m in self.modules():
                 if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                     nn.init.xavier_uniform_(m.weight)
                     nn.init.constant_(m.bias, 0.1)
+        # Init for the rest of the network
         else:
             for m in self.modules():
                 if isinstance(m, nn.Linear):
                     nn.init.xavier_uniform_(m.weight)
                     nn.init.constant_(m.bias, 0.1)
 
-
     def forward(self, x, a):
         """ ###### APPLY THE PERCEPTION MODULE """
         x, inter = self.perception(x)
-        ## Not a variable, just to store intermediate layers for future vizualization
-        #self.intermediate_layers = inter
+        # Not a variable, just to store intermediate layers for future visualization
+        # self.intermediate_layers = inter
 
         """ ###### APPLY THE MEASUREMENT MODULE """
         m = self.measurements(a)
@@ -125,7 +124,7 @@ class CoILICRA(nn.Module):
 
     def forward_branch(self, x, a, branch_number):
         """
-        DO a forward operation and return a single branch.
+        Do a forward operation and return a single branch.
 
         Args:
             x: the image input
@@ -136,16 +135,15 @@ class CoILICRA(nn.Module):
             the forward operation on the selected branch
 
         """
-        # Convert to integer just in case .
-        # TODO: take four branches, this is hardcoded
-        output_vec = torch.stack(self.forward(x, a)[0:4])
+        output_vec = torch.stack(self.forward(x, a)[0:self.params['branches']['number_of_branches']])
 
         return self.extract_branch(output_vec, branch_number)
 
     def get_perception_layers(self, x):
         return self.perception.get_layers_features(x)
 
-    def extract_branch(self, output_vec, branch_number):
+    @staticmethod
+    def extract_branch(output_vec, branch_number):
 
         branch_number = command_number_to_index(branch_number)
 
@@ -158,5 +156,3 @@ class CoILICRA(nn.Module):
                                      torch.cuda.LongTensor(range(0, len(branch_number)))])
 
         return output_vec[branch_number[0], branch_number[1], :]
-
-
