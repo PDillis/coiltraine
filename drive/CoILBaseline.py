@@ -183,6 +183,7 @@ class CoILBaseline(AutonomousAgent):
 
         return direction
 
+    @staticmethod
     def _process_model_outputs(self, outputs):
         """
          A bit of heuristics in the control, to eventually make car faster, for instance.

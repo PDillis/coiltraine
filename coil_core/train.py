@@ -190,9 +190,6 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                                     iteration)
             loss_window.append(loss.data.tolist())
             coil_logger.write_on_error_csv('train', loss.data)
-            # Console message to print
-            console_message = f"[{iteration:{iteration_digits}d}/{g_conf.NUMBER_ITERATIONS}] - Time: "\
-                              f"{format_time(accumulated_time):9s} - Loss: {loss.data:.16f}"
             """
             ######################################
                         Saving the model 
@@ -210,9 +207,11 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                     'best_loss_iter': best_loss_iter
                 }
                 torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
-            # Let's not print that much to the console
-            if iteration % 100 == 0:
-                print(console_message)
+            # Console message to print (will be on the same line, so we add \r; rest of info can be found in tensorboard
+            console_message = f"\r[{iteration:{iteration_digits}d}/{g_conf.NUMBER_ITERATIONS}] - Time: " \
+                              f"{format_time(accumulated_time):9s} - Loss: {loss.data:.16f} - Best Loss: "\
+                              f"{best_loss:.16f} / Best Loss Iteration: {best_loss_iter}"
+            print(console_message, end='')
         print(20*'#')
         print(' Finished training!')
         print(20 * '#')
