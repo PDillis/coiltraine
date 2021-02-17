@@ -7,7 +7,7 @@ import torch
 from torch.utils.data.sampler import Sampler
 from torch import optim
 from torch.autograd import Variable
-import torch.nn.Functional as F
+import torch.nn.functional as F
 
 from configs import g_conf
 
