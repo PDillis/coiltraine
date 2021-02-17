@@ -8,7 +8,7 @@ from configs import g_conf
 from logger import coil_logger
 from coilutils.general import softmax
 
-from .coil_sampler import PreSplittedSampler, RandomSampler
+from .coil_sampler import PreSplitSampler, RandomSampler
 
 
 def order_sequence(steerings, keys_sequence):
@@ -373,13 +373,14 @@ def select_balancing_strategy(dataset, iteration, number_of_workers):
             weights = get_inverse_freq_weights(keys_split, len(dataset.measurements) - g_conf.NUMBER_IMAGES_SEQUENCE)
         else:
             weights = params['weights']
-        sampler = PreSplittedSampler(keys_split, iteration * g_conf.BATCH_SIZE, weights)
+        sampler = PreSplitSampler(keys_split, iteration * g_conf.BATCH_SIZE, weights)
     else:
         sampler = RandomSampler(keys, iteration * g_conf.BATCH_SIZE)
 
     # The data loader is the multi threaded module from pytorch that release a number of
     # workers to get all the data.
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=g_conf.BATCH_SIZE,
+    data_loader = torch.utils.data.DataLoader(dataset,
+                                              batch_size=g_conf.BATCH_SIZE,
                                               sampler=sampler,
                                               num_workers=number_of_workers,
                                               pin_memory=True)

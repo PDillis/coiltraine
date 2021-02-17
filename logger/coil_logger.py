@@ -53,14 +53,12 @@ def create_log(exp_batch_name, exp_name, process_name, log_frequency=1, image_lo
     PROCESS_NAME = process_name
     LOG_FREQUENCY = log_frequency
     IMAGE_LOG_FREQUENCY = image_log_frequency
-    tl = Logger(os.path.join(root_path, exp_batch_name, exp_name, 'tensorboard_logs_'+process_name))
+    tl = Logger(os.path.join(root_path, exp_batch_name, exp_name, f'tensorboard_logs_{process_name}'))
 
 
 def close():
 
-    full_path_name = os.path.join('_logs', EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME, PROCESS_NAME)
-
+    full_path_name = os.path.join('_logs', EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME, PROCESS_NAME)
     closeFileLogger(full_path_name)
 
 

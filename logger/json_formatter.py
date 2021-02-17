@@ -1,7 +1,8 @@
 """
 logjson
 
-This package was created to leverage the very flexible standard Python logging package to produce JSON logs. JSON allows for combining multiple types of records in one stream which can easily be filtered or viewed together as needed.
+This package was created to leverage the very flexible standard Python logging package to produce JSON logs.
+JSON allows for combining multiple types of records in one stream which can easily be filtered or viewed together as needed.
 
 The uses of good logging data include debugging, user support, auditing, reporting, and more.
 
@@ -70,6 +71,7 @@ def filelogger(logname, recordfields=[], filename='json.log', level=INFO, writin
     handler = FileHandler(filename, writing_level)
     return logger(logname, handler, recordfields, level)
 
+
 def closeFileLogger(name):
     log = getLogger(name)
     x = _handlers.copy()
@@ -77,8 +79,6 @@ def closeFileLogger(name):
         log.removeHandler(i)
         i.flush()
         i.close()
-
-
 
 
 def streamlogger(logname, recordfields=[], outputstream=None, level=INFO):

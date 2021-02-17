@@ -31,7 +31,6 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
 
     Returns:
         None
-
     """
     try:
         # We set the visible cuda devices to select the GPU
@@ -64,7 +63,6 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                                                  g_conf.PRELOAD_MODEL_ALIAS,
                                                  'checkpoints',
                                                  f'{g_conf.PRELOAD_MODEL_CHECKPOINT}.pth'))
-
 
         # Get the latest checkpoint to be loaded
         # returns none if there are no checkpoints saved for this model
@@ -99,8 +97,9 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         print("=>Loaded dataset")
 
         data_loader = select_balancing_strategy(dataset, iteration, number_of_workers)
-        model = CoILModel(g_conf.MODEL_TYPE, g_conf.MODEL_CONFIGURATION)
-        model.cuda()
+
+        model = CoILModel(g_conf.MODEL_TYPE, g_conf.MODEL_CONFIGURATION).cuda()
+
         optimizer = optim.Adam(model.parameters(), lr=g_conf.LEARNING_RATE)
 
         if checkpoint_file is not None or g_conf.PRELOAD_MODEL_ALIAS is not None:
@@ -127,7 +126,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             if g_conf.FINISH_ON_VALIDATION_STALE is not None and \
                     check_loss_validation_stopped(iteration, g_conf.FINISH_ON_VALIDATION_STALE):
                 break
-            """
+            """     
                 ####################################
                     Main optimization loop
                 ####################################
@@ -157,9 +156,9 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             optimizer.step()
             """
                 ################################################
-                    Adding tensorboard logs.
-                    Making calculations for logging purposes.
-                    These logs are monitored by the printer module.
+                Adding tensorboard logs.
+                Making calculations for logging purposes.
+                These logs are monitored by the printer module.
                 #################################################
             """
             coil_logger.add_scalar('Loss', loss.data, iteration)
@@ -197,7 +196,6 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             """
             # Save the model according to g_conf.SAVE_SCHEDULE
             if is_ready_to_save(iteration):
-                console_message += ' - Saving the model!'
                 state = {
                     'iteration': iteration,
                     'state_dict': model.state_dict(),
@@ -209,7 +207,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                 torch.save(state, os.path.join('_logs', exp_folder, exp_alias, 'checkpoints', f'{iteration}.pth'))
             # Console message to print (will be on the same line, so we add \r; rest of info can be found in tensorboard
             console_message = f"\r[{iteration:{iteration_digits}d}/{g_conf.NUMBER_ITERATIONS}] - Time: " \
-                              f"{format_time(accumulated_time):9s} - Loss: {loss.data:.16f} - Best Loss: "\
+                              f"{format_time(accumulated_time):15s} - Loss: {loss.data:.16f} - Best Loss: "\
                               f"{best_loss:.16f} / Best Loss Iteration: {best_loss_iter}"
             print(console_message, end='')
         print(20*'#')
