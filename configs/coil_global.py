@@ -55,6 +55,8 @@ _g_conf.NUMBER_FRAMES_FUSION = 1
 _g_conf.NUMBER_IMAGES_SEQUENCE = 1
 _g_conf.SEQUENCE_STRIDE = 1
 _g_conf.TEST_SCHEDULE = range(0, 2000, 200)
+_g_conf.VAL_DATASET_NAME = '1hours-Town01'
+_g_conf.EXPERIENCE_FILE_VALID = ''
 _g_conf.SPEED_FACTOR = 12.0
 _g_conf.AUGMENT_LATERAL_STEERINGS = 6
 _g_conf.NUMBER_OF_HOURS = 1
@@ -132,8 +134,8 @@ def set_type_of_process(process_type, param=None):
     NOTE: AFTER CALLING THIS FUNCTION, THE CONFIGURATION CLOSES
 
     Args:
-        type:
-
+        process_type: train, validation, or drive
+        param: Name of the dataset or Town to drive
     Returns:
 
     """
@@ -144,12 +146,12 @@ def set_type_of_process(process_type, param=None):
     if process_type == 'train':
         _g_conf.PROCESS_NAME = process_type
     elif process_type == "validation":
-        _g_conf.PROCESS_NAME = process_type + '_' + param
+        _g_conf.PROCESS_NAME = f'{process_type}_{param}'
     if process_type == "drive":  # FOR drive param is city name.
         _g_conf.CITY_NAME = param.split('_')[-1]
-        _g_conf.PROCESS_NAME = process_type + '_' + param
+        _g_conf.PROCESS_NAME = f'{process_type}_{param}'
 
-    #else:  # FOr the test case we join with the name of the experimental suite.
+    # else:  # FOr the test case we join with the name of the experimental suite.
 
     create_log(_g_conf.EXPERIMENT_BATCH_NAME,
                _g_conf.EXPERIMENT_NAME,
@@ -158,27 +160,29 @@ def set_type_of_process(process_type, param=None):
                _g_conf.LOG_IMAGE_WRITING_FREQUENCY)
 
     if process_type == "train":
-        if not os.path.exists(os.path.join('_logs', _g_conf.EXPERIMENT_BATCH_NAME,
-                                            _g_conf.EXPERIMENT_NAME,
-                                            'checkpoints') ):
-                os.mkdir(os.path.join('_logs', _g_conf.EXPERIMENT_BATCH_NAME,
-                                      _g_conf.EXPERIMENT_NAME,
-                                      'checkpoints'))
+        if not os.path.exists(os.path.join('_logs',
+                                           _g_conf.EXPERIMENT_BATCH_NAME,
+                                           _g_conf.EXPERIMENT_NAME,
+                                           'checkpoints') ):
+            os.mkdir(os.path.join('_logs',
+                                  _g_conf.EXPERIMENT_BATCH_NAME,
+                                  _g_conf.EXPERIMENT_NAME,
+                                  'checkpoints'))
 
     if process_type == "validation" or process_type == 'drive':
-        csv_path = os.path.join('_logs', _g_conf.EXPERIMENT_BATCH_NAME,
-                                _g_conf.EXPERIMENT_NAME, f'{_g_conf.PROCESS_NAME}_csv')
+        csv_path = os.path.join('_logs',
+                                _g_conf.EXPERIMENT_BATCH_NAME,
+                                _g_conf.EXPERIMENT_NAME,
+                                f'{_g_conf.PROCESS_NAME}_csv')
         if not os.path.exists(csv_path):
             os.mkdir(csv_path)
-
 
     # TODO: check if there is some integrity.
 
     add_message('Loading', {'ProcessName': _g_conf.EXPERIMENT_GENERATED_NAME,
-                            'FullConfiguration': _g_conf.TRAIN_DATASET_NAME + 'dict'})
+                            'FullConfiguration': f'{_g_conf.TRAIN_DATASET_NAME}dict'})
 
     _g_conf.immutable(True)
 
 
 g_conf = _g_conf
-

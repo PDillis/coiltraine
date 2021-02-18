@@ -26,7 +26,7 @@ def execute_train(gpu, exp_folder, exp_alias, suppress_output=True, number_of_wo
     p.start()
 
 
-def execute_validation(gpu, exp_folder, exp_alias, dataset, suppress_output=True):
+def execute_validation(gpu, exp_folder, exp_alias, suppress_output=True):
     """
     Args:
         gpu: The gpu being used for this execution.
@@ -38,7 +38,7 @@ def execute_validation(gpu, exp_folder, exp_alias, dataset, suppress_output=True
     create_exp_path(exp_folder, exp_alias)
     # The difference between train and validation is the
     p = multiprocessing.Process(target=validate.execute,
-                                args=(gpu, exp_folder, exp_alias, dataset, suppress_output))
+                                args=(gpu, exp_folder, exp_alias, suppress_output))
     p.start()
 
 

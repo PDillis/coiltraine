@@ -281,7 +281,7 @@ class CoILDataset(Dataset):
         elif process_type == 'train':
             experience_json = g_conf.EXPERIENCE_FILE
         else:
-            raise Exception("Invalid name for process_type, chose from (train, validation)")
+            raise Exception("Invalid name for process_type, choose from (train, validation)")
 
         # We will check one image to see if it is what the network expects
         checked_image = False

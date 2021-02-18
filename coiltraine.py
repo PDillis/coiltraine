@@ -151,8 +151,7 @@ if __name__ == '__main__':
                           suppress_output=False, number_of_workers=args.number_of_workers)
 
         elif args.single_process == 'validation':
-            execute_validation(gpu=args.gpus[0], exp_batch=args.folder, exp_alias=args.exp,
-                               dataset=args.validation_datasets[0], suppress_output=False)
+            execute_validation(gpu=args.gpus[0], exp_folder=args.folder, exp_alias=args.exp, suppress_output=False)
 
         elif args.single_process == 'drive':
             # The definition of parameters for driving

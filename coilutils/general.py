@@ -602,10 +602,10 @@ def format_time(seconds):
     """
     s = int(np.rint(seconds))
     if s < 60:
-        return f"         {s:02}s"
+        return f"           {s:02}s"
     elif s < 60 * 60:
-        return f"    {s//60:02}m {s%60:02}s"
+        return f"      {s//60:02}m {s%60:02}s"
     elif s < 24 * 60 * 60:
         return f"{s // (60 * 60):02}h {(s // 60) % 60:02}m {s % 60:02}s"
     else:
-        return f"{s // (24 * 60 * 60):02}d {(s // (60 * 60)) % 24:02}h {(s // 60) % 60:02}m"
+        return f"{s // (24 * 60 * 60):02}d {(s // (60 * 60)) % 24:02}h {(s // 60) % 60:02}m {s % 60:02}s"
