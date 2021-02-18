@@ -24,7 +24,7 @@ TRAIN_DATA_FPS: 20  # FPS of the saved dataset
 AUGMENTATION: None  # The image augmentation applied on every input image
 DATA_USED: 'all'  # The part of the data to be used (central, all, sides)
 USE_NOISE_DATA: False  # If we use the noise data.
-NUMBER_OF_HOURS: 1  # Number of hours to be taken from the input data
+NUMBER_OF_HOURS: 20  # Number of hours to be taken from the input data
 EXPERIENCE_FILE: '/home/dporres/cexp/database/sim2real/20h_dataset_Epic.json'
 
 #### Testing Related Parameters ####

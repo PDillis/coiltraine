@@ -28,7 +28,7 @@ NUMBER_OF_HOURS: 1  # Number of hours to be taken from the input data
 EXPERIENCE_FILE: '/home/dporres/Documents/code/cexp/database/sim2real/1h_dataset_Low.json'
 
 #### Testing Related Parameters ####
-TEST_SCHEDULE: range(1000, 5000, 1000)  # The frequency the model is actually tested.
+TEST_SCHEDULE: range(1000, 5001, 2000)  # The frequency the model is actually tested.
 VAL_DATASET_NAME: '1h_dataset_Epic'
 EXPERIENCE_FILE_VALID: '/home/dporres/Documents/code/cexp/database/sim2real/1h_dataset_Epic.json'
 #### Model Related Parameters ####

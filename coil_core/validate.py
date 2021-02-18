@@ -66,7 +66,7 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
         # Definition of the dataset to be used. Preload name is just the validation data name
         dataset = CoILDataset(full_dataset,
                               transform=augmenter,
-                              preload_name=f'{g_conf.NUMBER_OF_HOURS}h_{g_conf.VAL_DATASET_NAME}',
+                              preload_name=g_conf.VAL_DATASET_NAME,
                               process_type='validation')
 
         # Creates the sampler, this part is responsible for managing the keys. It divides
@@ -120,38 +120,38 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                     else:
                         write_regular_output(checkpoint_iteration, output)
 
-                    mse = torch.mean((output - dataset.extract_targets(data).cuda())**2).data.tolist()
-                    mean_error = torch.mean(torch.abs(output - dataset.extract_targets(data).cuda())).data.tolist()
+                    err = output - dataset.extract_targets(data).cuda()
+                    error = torch.abs(err)
+                    mse = torch.mean(err**2).data.tolist()
+                    mean_error = torch.mean(error).data.tolist()
 
                     accumulated_error += mean_error
                     accumulated_mse += mse
-                    error = torch.abs(output - dataset.extract_targets(data).cuda())
 
                     # Log a random position
                     position = random.randint(0, len(output.data.tolist())-1)
 
-                    coil_logger.add_message('Iterating',
-                         {'Checkpoint': latest,
-                          'Iteration': (str(iteration_on_checkpoint*120)+'/'+str(len(dataset))),
-                          'MeanError': mean_error,
-                          'MSE': mse,
-                          'Output': output[position].data.tolist(),
-                          'GroundTruth': dataset.extract_targets(data)[position].data.tolist(),
-                          'Error': error[position].data.tolist(),
-                          'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
-                          latest)
+                    coil_logger.add_message('Iterating', {'Checkpoint': latest,
+                                                          'Iteration': f'{iteration_on_checkpoint * g_conf.BATCH_SIZE}/{len(dataset)}',
+                                                          'MeanError': mean_error,
+                                                          'MSE': mse,
+                                                          'Output': output[position].data.tolist(),
+                                                          'GroundTruth': dataset.extract_targets(data)[position].data.tolist(),
+                                                          'Error': error[position].data.tolist(),
+                                                          'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
+                                            latest)
                     iteration_on_checkpoint += 1
-                    print("Iteration %d  on Checkpoint %d : Error %f" % (iteration_on_checkpoint,
-                                                                checkpoint_iteration, mean_error))
+                    print(f"\rProgress: {100*iteration_on_checkpoint * g_conf.BATCH_SIZE / len(dataset):3.4f}% - "
+                          f"Average Error: {accumulated_error/len(data_loader):.16f} - "
+                          f"Average MSE: {accumulated_mse/len(data_loader):.16f}", end='')
 
                 """
                     ########
                     Finish a round of validation, write results, wait for the next
                     ########
                 """
-
-                checkpoint_average_mse = accumulated_mse/(len(data_loader))
-                checkpoint_average_error = accumulated_error/(len(data_loader))
+                checkpoint_average_mse = accumulated_mse / len(data_loader)
+                checkpoint_average_error = accumulated_error / len(data_loader)
                 coil_logger.add_scalar('Loss', checkpoint_average_mse, latest, True)
                 coil_logger.add_scalar('Error', checkpoint_average_error, latest, True)
 
@@ -163,18 +163,13 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                     best_error = checkpoint_average_error
                     best_error_iter = latest
 
-                coil_logger.add_message('Iterating',
-                     {'Summary':
-                         {
-                          'Error': checkpoint_average_error,
-                          'Loss': checkpoint_average_mse,
-                          'BestError': best_error,
-                          'BestMSE': best_mse,
-                          'BestMSECheckpoint': best_mse_iter,
-                          'BestErrorCheckpoint': best_error_iter
-                         },
-
-                      'Checkpoint': latest},
+                coil_logger.add_message('Iterating', {'Summary': {'Error': checkpoint_average_error,
+                                                                  'Loss': checkpoint_average_mse,
+                                                                  'BestError': best_error,
+                                                                  'BestMSE': best_mse,
+                                                                  'BestMSECheckpoint': best_mse_iter,
+                                                                  'BestErrorCheckpoint': best_error_iter},
+                                                      'Checkpoint': latest},
                                         latest)
 
                 l1_window.append(checkpoint_average_error)

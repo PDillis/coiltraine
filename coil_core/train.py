@@ -92,7 +92,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         # can be found
         dataset = CoILDataset(full_dataset,
                               transform=augmenter,
-                              preload_name=f'{g_conf.NUMBER_OF_HOURS}h_{g_conf.TRAIN_DATASET_NAME}',
+                              preload_name=g_conf.TRAIN_DATASET_NAME,
                               process_type='train')
         print("=>Loaded dataset")
 
