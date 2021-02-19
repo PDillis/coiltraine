@@ -29,8 +29,6 @@ def adjust_learning_rate_auto(optimizer, loss_window, coil_logger):
     """
     minlr = 0.0000001
     learning_rate = g_conf.LEARNING_RATE
-    thresh = g_conf.LEARNING_RATE_THRESHOLD
-    decaylevel = g_conf.LEARNING_RATE_DECAY_LEVEL
     n = 1000
     start_point = 0
     while n < len(loss_window):
@@ -40,14 +38,15 @@ def adjust_learning_rate_auto(optimizer, loss_window, coil_logger):
         steps_no_decrease_robust = dlib.count_steps_without_decrease_robust(loss_window[start_point:n])
         coil_logger.add_message('{(Start_point/n): (Steps not decreased/not decreased robust)}',
                                 {f'({start_point}/{n})': f'{steps_no_decrease}/{steps_no_decrease_robust})'})
-        if steps_no_decrease > thresh and steps_no_decrease_robust > thresh:
+        if steps_no_decrease > g_conf.LEARNING_RATE_THRESHOLD and \
+                steps_no_decrease_robust > g_conf.LEARNING_RATE_THRESHOLD:
             start_point = n
-            learning_rate = learning_rate * decaylevel
+            learning_rate = learning_rate * g_conf.LEARNING_RATE_DECAY_LEVEL
 
         n += 1000
 
     learning_rate = max(learning_rate, minlr)
+    coil_logger.add_scalar('Learning rate', learning_rate, len(loss_window))
 
     for param_group in optimizer.param_groups:
-        coil_logger.add_message('Learning rate', {'lr': learning_rate})
         param_group['lr'] = learning_rate

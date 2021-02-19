@@ -11,8 +11,7 @@ from configs import g_conf, set_type_of_process, merge_with_yaml
 from network import CoILModel, Loss, adjust_learning_rate_auto
 from input import CoILDataset, Augmenter, select_balancing_strategy
 from logger import coil_logger
-from coilutils.checkpoint_schedule import is_ready_to_save, get_latest_saved_checkpoint, \
-                                    check_loss_validation_stopped
+from coilutils.checkpoint_schedule import is_ready_to_save, get_latest_saved_checkpoint, check_loss_validation_stopped
 from coilutils.general import format_time
 
 
@@ -116,9 +115,11 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
 
         # For printing on the console purposes
         iteration_digits = int(np.log10(g_conf.NUMBER_ITERATIONS)) + 1
+
         print(20 * '#')
         print(' Starting training!')
         print(20 * '#')
+
         # Loss time series window
         for data in data_loader:
             # Basically in this mode of execution, we validate every X Steps, if it goes up 3 times,
@@ -210,6 +211,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                               f"{format_time(accumulated_time):15s} - Loss: {loss.data:.16f} - Best Loss: "\
                               f"{best_loss:.16f} / Best Loss Iteration: {best_loss_iter}"
             print(console_message, end='')
+
         print(20*'#')
         print(' Finished training!')
         print(20 * '#')

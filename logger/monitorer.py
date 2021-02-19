@@ -13,7 +13,7 @@ from plotter.data_reading import read_summary_csv
 # Check the log and also put it to tensorboard
 
 
-#### Get things from CARLA benchmark directly to plot as logs #####
+# Get things from CARLA benchmark directly to plot as logs
 def get_episode_number(benchmark_log_name):
     """ Get the current episode"""
 
@@ -39,18 +39,14 @@ def get_number_episodes_completed(benchmark_log_name):
         return sum(control_dict['resul'])
 
 
-
-
 def get_latest_output(data):
 
     # Find the one that has an iteration .........
     for i in range(1, len(data)):
-        if 'Iterating' in data[-i] and ('Iteration' in data[-i]['Iterating'] or
-                                            'Checkpoint' in data[-i]['Iterating']) and \
-                                       'Summary' not in data[-i]['Iterating']:
+        if 'Iterating' in data[-i] and ('Iteration' in data[-i]['Iterating'] or 'Checkpoint' in data[-i]['Iterating']) \
+                and 'Summary' not in data[-i]['Iterating']:
 
             return data[-i]
-
 
 
 def get_summary(data):
@@ -63,6 +59,7 @@ def get_summary(data):
     else:  # NO SUMMARY YET COMPUTED
         return ''
 
+
 def get_error_summary(data):
 
     if 'Error' in data[-1]:
@@ -70,9 +67,13 @@ def get_error_summary(data):
     else:
         return ''
 
+
 def get_latest_checkpoint_validation():
+    """
+
+    """
     csv_file_path = os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                                 g_conf.EXPERIMENT_NAME, g_conf.PROCESS_NAME + '_csv')
+                                 g_conf.EXPERIMENT_NAME, f'{g_conf.PROCESS_NAME}_csv')
 
     csv_files = os.listdir(csv_file_path)
 
@@ -93,8 +94,8 @@ def get_latest_checkpoint_validation():
     if g_conf.TEST_SCHEDULE.index(not_evaluated_logs[0]) == 0:
         return None
 
-
     return g_conf.TEST_SCHEDULE[g_conf.TEST_SCHEDULE.index(not_evaluated_logs[0])-1]
+
 
 def get_latest_checkpoint_drive(control_filename):
 
@@ -219,8 +220,4 @@ def get_status(exp_batch, experiment, process_name):
     if 'Error' in data[-1]:
         return ['Error', get_error_summary(data)]
 
-
     raise ValueError(" No valid status found")
-
-
-

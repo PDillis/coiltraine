@@ -91,6 +91,9 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
         best_mse_iter = 0
         best_error_iter = 0
 
+        print(20 * '#')
+        print('Starting validation!')
+        print(20 * '#')
         while not maximun_checkpoint_reach(latest, g_conf.TEST_SCHEDULE):
 
             if is_next_checkpoint_ready(g_conf.TEST_SCHEDULE):
@@ -104,9 +107,10 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                 model.load_state_dict(checkpoint['state_dict'])
 
                 model.eval()
-                accumulated_mse = 0
-                accumulated_error = 0
+                checkpoint_average_mse = 0
+                checkpoint_average_error = 0
                 iteration_on_checkpoint = 0
+                errors = []
                 for data in data_loader:
 
                     # Compute the forward pass on a batch from  the validation dataset
@@ -121,12 +125,10 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                         write_regular_output(checkpoint_iteration, output)
 
                     err = output - dataset.extract_targets(data).cuda()
+                    errors.append(err.cpu().data.tolist())
                     error = torch.abs(err)
                     mse = torch.mean(err**2).data.tolist()
                     mean_error = torch.mean(error).data.tolist()
-
-                    accumulated_error += mean_error
-                    accumulated_mse += mse
 
                     # Log a random position
                     position = random.randint(0, len(output.data.tolist())-1)
@@ -140,20 +142,23 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                                                           'Error': error[position].data.tolist(),
                                                           'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
                                             latest)
+
                     iteration_on_checkpoint += 1
-                    print(f"\rProgress: {100*iteration_on_checkpoint * g_conf.BATCH_SIZE / len(dataset):3.4f}% - "
-                          f"Average Error: {accumulated_error/len(data_loader):.16f} - "
-                          f"Average MSE: {accumulated_mse/len(data_loader):.16f}", end='')
+                    checkpoint_average_error += (mean_error - checkpoint_average_error) / iteration_on_checkpoint
+                    checkpoint_average_mse += (mse - checkpoint_average_mse) / iteration_on_checkpoint
+                    print(f"\rProgress: {100 * iteration_on_checkpoint * g_conf.BATCH_SIZE / len(dataset):3.4f}% - "
+                          f"Average Error: {checkpoint_average_error:.16f} - "
+                          f"Average MSE: {checkpoint_average_mse:.16f}", end='')
 
                 """
                     ########
                     Finish a round of validation, write results, wait for the next
                     ########
                 """
-                checkpoint_average_mse = accumulated_mse / len(data_loader)
-                checkpoint_average_error = accumulated_error / len(data_loader)
-                coil_logger.add_scalar('Loss', checkpoint_average_mse, latest, True)
-                coil_logger.add_scalar('Error', checkpoint_average_error, latest, True)
+                coil_logger.add_scalar('Checkpoint MSE', checkpoint_average_mse, latest, True)
+                coil_logger.add_scalar('Checkpoint Error', checkpoint_average_error, latest, True)
+
+                coil_logger.add_histogram('Error (yhat-y)', errors, latest)
 
                 if checkpoint_average_mse < best_mse:
                     best_mse = checkpoint_average_mse
@@ -183,13 +188,15 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                         break
 
             else:
-
                 latest = get_latest_evaluated_checkpoint()
                 time.sleep(1)
 
                 coil_logger.add_message('Loading', {'Message': 'Waiting Checkpoint'})
                 print("Waiting for the next Validation")
 
+        print('\n' + 20 * '#')
+        print('Finished validation!')
+        print(20 * '#')
         coil_logger.add_message('Finished', {})
 
     except KeyboardInterrupt:

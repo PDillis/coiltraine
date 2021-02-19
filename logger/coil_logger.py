@@ -69,9 +69,7 @@ def add_message(phase, message, iteration=None):
         phase: The phase this message corresponds
         message: The dictionary with the message
         iteration:
-
     Returns:
-
     """
     if phase == 'Iterating' and iteration is None:
         raise ValueError("Iterating messages should have the iteration/checkpoint.")
@@ -94,10 +92,7 @@ def check_finish(process, drive_name=None):
     Args
         checkpoint_name: the name of the checkpoint being writen
         output: what is being written on the file
-
-
     Returns:
-
     """
     if process != 'drive' and process != 'train':
         raise ValueError('Wrong process to write finish')
@@ -120,10 +115,7 @@ def write_on_csv(checkpoint_name, output):
     Args
         checkpoint_name: the name of the checkpoint being writen
         output: what is being written on the file
-
-
     Returns:
-
     """
     root_path = "_logs"
 
@@ -144,10 +136,7 @@ def write_on_error_csv(error_file_name, output):
     Args
         dataset_name: the name of the checkpoint being writen
         output: what is being written on the file
-
-
     Returns:
-
     """
     root_path = "_logs"
 
@@ -167,8 +156,6 @@ def write_stop(validation_dataset, checkpoint):
     Args
         checkpoint_name: the name of the checkpoint being writen
         output: what is being written on the file
-
-
     Returns:
     """
     root_path = "_logs"
@@ -222,14 +209,10 @@ def recover_loss_window(dataset_name, iteration):
 
 
 def add_scalar(tag, value, iteration=None, force_writing=False):
-
     """
     For raw output  logging on tensorboard.
     If you force writing it always writes regardless of the iteration
-    # TODO: how about making the decision to write outside ?
-    # TODO: The problem is that we dont want that in a main
     """
-
     if iteration is not None:
         if iteration % LOG_FREQUENCY == 0 or force_writing:
             tl.scalar_summary(tag, value, iteration + 1)
@@ -238,13 +221,12 @@ def add_scalar(tag, value, iteration=None, force_writing=False):
         tl.scalar_summary(tag, value, 0)
 
 
-def add_image(tag, images, iteration=None):
+def add_image(tag, images, num_images=3, iteration=None):
     # Add the image to a log, the monitor is the module responsible by checking this
     # and eventually put some of the images to tensorboard.
-    # TODO: change to sampling 10 images instead
     if iteration is not None:
         if iteration % IMAGE_LOG_FREQUENCY == 0:
-            images = images.view(-1, images.shape[1], images.shape[2], images.shape[3])[:10].cpu().data.numpy()
+            images = images.view(-1, images.shape[1], images.shape[2], images.shape[3])[:num_images].cpu().data.numpy()
             new_images = [] 
             if images.shape[1] == 1:
                 cmap = plt.get_cmap('inferno')
@@ -258,3 +240,14 @@ def add_image(tag, images, iteration=None):
     else:
         images = images.view(-1, images.shape[1], images.shape[2], images.shape[3])[:10].cpu().data.numpy()
         tl.image_summary(tag, images, iteration + 1)
+
+
+def add_histogram(tag, values, iteration=None):
+    """
+    Add a histogram to a log on tensorboard
+    """
+    if iteration is not None:
+        if iteration % LOG_FREQUENCY == 0:
+            tl.histogram_summary(tag, values, iteration + 1)
+    else:
+        tl.histogram_summary(tag, values, 0)
