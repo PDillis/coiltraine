@@ -162,8 +162,8 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                 These logs are monitored by the printer module.
                 #################################################
             """
-            coil_logger.add_scalar('Loss', loss.data, iteration)
-            coil_logger.add_image('Image', torch.squeeze(data['rgb']), iteration)
+            coil_logger.add_scalar(tag='Loss', value=loss.data, iteration=iteration)
+            coil_logger.add_image(tag='Image', images=torch.squeeze(data['rgb']), iteration=iteration)
             if loss.data < best_loss:
                 best_loss = loss.data.tolist()
                 best_loss_iter = iteration
@@ -175,21 +175,21 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             error = torch.abs(output - dataset.extract_targets(data).cuda())[position].data.tolist()
 
             accumulated_time += time.time() - capture_time
-            coil_logger.add_scalar('Error steer', error[0], iteration)
-            coil_logger.add_scalar('Error throttle', error[1], iteration)
-            coil_logger.add_scalar('Error brake', error[2], iteration)
-            coil_logger.add_message('Iterating',
-                                    {'Iteration': iteration,
-                                     'Loss': loss.data.tolist(),
-                                     'Images/s': (iteration * g_conf.BATCH_SIZE) / accumulated_time,
-                                     'BestLoss': best_loss, 'BestLossIteration': best_loss_iter,
-                                     'Output': output[position].data.tolist(),
-                                     'GroundTruth': dataset.extract_targets(data)[position].data.tolist(),
-                                     'Error': error,
-                                     'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
-                                    iteration)
+            coil_logger.add_scalar(tag='Error steer', value=error[0], iteration=iteration)
+            coil_logger.add_scalar(tag='Error throttle', value=error[1],  iteration=iteration)
+            coil_logger.add_scalar(tag='Error brake', value=error[2], iteration=iteration)
+            coil_logger.add_message(phase='Iterating',
+                                    message={'Iteration': iteration,
+                                             'Loss': loss.data.tolist(),
+                                             'Images/s': (iteration * g_conf.BATCH_SIZE) / accumulated_time,
+                                             'BestLoss': best_loss, 'BestLossIteration': best_loss_iter,
+                                             'Output': output[position].data.tolist(),
+                                             'GroundTruth': dataset.extract_targets(data)[position].data.tolist(),
+                                             'Error': error,
+                                             'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
+                                    iteration=iteration)
             loss_window.append(loss.data.tolist())
-            coil_logger.write_on_error_csv('train', loss.data)
+            coil_logger.write_on_error_csv(error_file_name='train', output=loss.data)
             """
             ######################################
                         Saving the model 
