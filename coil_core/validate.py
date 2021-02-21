@@ -14,7 +14,8 @@ from network import CoILModel
 from input import CoILDataset, Augmenter
 from logger import coil_logger
 from coilutils.checkpoint_schedule import get_latest_evaluated_checkpoint, is_next_checkpoint_ready,\
-    maximun_checkpoint_reach, get_next_checkpoint
+    maximum_checkpoint_reached, get_next_checkpoint
+from coilutils.general import save_output
 
 
 def write_waypoints_output(iteration, output):
@@ -48,16 +49,9 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
         g_conf.NUMBER_OF_HOURS = 10000
         set_type_of_process(process_type='validation', param=g_conf.VAL_DATASET_NAME)
 
-        if not os.path.exists('_output_logs'):
-            os.mkdir('_output_logs')
-
+        # Save the output to a file if so desired
         if suppress_output:
-            sys.stdout = open(os.path.join('_output_logs',
-                                           f'{exp_alias}_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
-                              "a", buffering=1)
-            sys.stderr = open(os.path.join('_output_logs',
-                                           f'{exp_alias}_err_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
-                              "a", buffering=1)
+            save_output(exp_alias)
 
         # Define the dataset. This structure has the __get_item__ redefined in a way
         # that you can access the HDFILES positions from the root directory as a in a vector.
@@ -74,7 +68,8 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
 
         # The data loader is the multi threaded module from pytorch that release a number of
         # workers to get all the data.
-        data_loader = torch.utils.data.DataLoader(dataset, batch_size=g_conf.BATCH_SIZE,
+        data_loader = torch.utils.data.DataLoader(dataset,
+                                                  batch_size=g_conf.BATCH_SIZE//2,
                                                   shuffle=False,
                                                   num_workers=g_conf.NUMBER_OF_LOADING_WORKERS,
                                                   pin_memory=True)
@@ -94,8 +89,10 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
         print(20 * '#')
         print('Starting validation!')
         print(20 * '#')
-        while not maximun_checkpoint_reach(latest, g_conf.TEST_SCHEDULE):
 
+        # Check if the maximum checkpoint for validating has been reached
+        while not maximum_checkpoint_reached(latest):
+            # Wait until the next checkpoint is ready (assuming this is run whilst running the training)
             if is_next_checkpoint_ready(g_conf.TEST_SCHEDULE):
 
                 latest = get_next_checkpoint(g_conf.TEST_SCHEDULE)
@@ -107,6 +104,8 @@ def execute(gpu, exp_batch, exp_alias, suppress_output):
                 model.load_state_dict(checkpoint['state_dict'])
 
                 model.eval()
+
+                # TODO: we must use the loss function defined in the config, not average error or mse!
                 checkpoint_average_mse = 0
                 checkpoint_average_error = 0
                 iteration_on_checkpoint = 0

@@ -12,7 +12,7 @@ from network import CoILModel, Loss, adjust_learning_rate_auto
 from input import CoILDataset, Augmenter, select_balancing_strategy
 from logger import coil_logger
 from coilutils.checkpoint_schedule import is_ready_to_save, get_latest_saved_checkpoint, check_loss_validation_stopped
-from coilutils.general import format_time
+from coilutils.general import format_time, save_output
 
 
 # The main function maybe we could call it with a default name
@@ -44,12 +44,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
 
         # Put the output to a separate file if it is the case
         if suppress_output:
-            if not os.path.exists('_output_logs'):
-                os.mkdir('_output_logs')
-            sys.stdout = open(os.path.join('_output_logs', f'{exp_alias}_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
-                              "a", buffering=1)
-            sys.stderr = open(os.path.join('_output_logs', f'{exp_alias}_err_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
-                              "a", buffering=1)
+            save_output(exp_alias)
 
         if coil_logger.check_finish('train'):
             coil_logger.add_message('Finished', {})

@@ -1,5 +1,8 @@
 import re
 import os
+import sys
+from configs import g_conf
+
 import smtplib
 import numpy as np
 
@@ -602,10 +605,19 @@ def format_time(seconds):
     """
     s = int(np.rint(seconds))
     if s < 60:
-        return f"           {s:02}s"
+        return f"            {s:02}s"
     elif s < 60 * 60:
-        return f"      {s//60:02}m {s%60:02}s"
+        return f"        {s//60:02}m {s%60:02}s"
     elif s < 24 * 60 * 60:
-        return f"{s // (60 * 60):02}h {(s // 60) % 60:02}m {s % 60:02}s"
+        return f"    {s // (60 * 60):02}h {(s // 60) % 60:02}m {s % 60:02}s"
     else:
         return f"{s // (24 * 60 * 60):02}d {(s // (60 * 60)) % 24:02}h {(s // 60) % 60:02}m {s % 60:02}s"
+
+
+def save_output(exp_alias):
+    if not os.path.exists('_output_logs'):
+        os.mkdir('_output_logs')
+    sys.stdout = open(os.path.join('_output_logs', f'{exp_alias}_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
+                      "a", buffering=1)
+    sys.stderr = open(os.path.join('_output_logs', f'{exp_alias}_err_{g_conf.PROCESS_NAME}_{os.getpid()}.out'),
+                      "a", buffering=1)

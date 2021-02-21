@@ -19,7 +19,7 @@ from carla08.driving_benchmark import run_driving_benchmark
 from drive import CoILAgent
 from logger import coil_logger
 from configs import g_conf, merge_with_yaml, set_type_of_process
-from coilutils.checkpoint_schedule import maximun_checkpoint_reach, get_next_checkpoint,\
+from coilutils.checkpoint_schedule import maximum_checkpoint_reached, get_next_checkpoint,\
     is_next_checkpoint_ready, get_latest_evaluated_checkpoint, validation_stale_point
 from coilutils.general import compute_average_std_separatetasks, get_latest_path, write_header_control_summary,\
      write_data_point_control_summary, camelcase_to_snakecase, unique
@@ -242,7 +242,7 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
             Main Loop , Run a benchmark for each specified checkpoint on the "Test Configuration"
             #####
             """
-            while not maximun_checkpoint_reach(latest, g_conf.TEST_SCHEDULE):
+            while not maximum_checkpoint_reached(latest):
                 # Get the correct checkpoint
                 # We check it for some task name, all of then are ready at the same time
                 if is_next_checkpoint_ready(g_conf.TEST_SCHEDULE,

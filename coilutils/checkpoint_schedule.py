@@ -22,20 +22,22 @@ def is_open(file_name):
         raise NameError
 
 
-def maximun_checkpoint_reach(iteration, checkpoint_schedule):
+def maximum_checkpoint_reached(iteration):
+    """
+    Return whether or not the maximum checkpoint has been reached according to the test/validation schedule
+    """
     if iteration is None:
         return False
-
     else:
-        return iteration >= max(checkpoint_schedule)
+        return iteration >= max(g_conf.TEST_SCHEDULE)
 
 
 """ FUNCTIONS FOR SAVING THE CHECKPOINTS """
 
 
 def is_ready_to_save(iteration):
-    """ Returns if the iteration is a iteration for saving a checkpoint
-
+    """
+    Returns if the iteration is a saving iteration according to the schedule in the experiment config
     """
     return iteration in set(g_conf.SAVE_SCHEDULE)
 
@@ -58,34 +60,32 @@ def get_latest_saved_checkpoint():
 
 
 def get_latest_evaluated_checkpoint(filename=None):
-
     """
         Get the latest checkpoint that was validated or tested.
     Args:
     """
-
     return monitorer.get_latest_checkpoint(filename)
 
 
 def is_next_checkpoint_ready(checkpoint_schedule, control_filename=None):
 
     # IT needs
-    ltst_check = get_latest_evaluated_checkpoint(control_filename)
+    latest_check = get_latest_evaluated_checkpoint(control_filename)
 
     # This means that we got the last one, so we return false and go back to the loop
-    if ltst_check == g_conf.TEST_SCHEDULE[-1]:
+    if latest_check == g_conf.TEST_SCHEDULE[-1]:
         return False
-    if ltst_check is None:  # This means no checkpoints were evaluated
+    if latest_check is None:  # This means no checkpoints were evaluated
         next_check = checkpoint_schedule[0]  # Return the first one
     else:
-        next_check = checkpoint_schedule[checkpoint_schedule.index(ltst_check)+1]
+        next_check = checkpoint_schedule[checkpoint_schedule.index(latest_check) + 1]
 
     # Check if the file is in the checkpoints list.
     if os.path.exists(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME, g_conf.EXPERIMENT_NAME, 'checkpoints')):
 
         # test if the file exist:
-        if str(next_check) + '.pth' in os.listdir(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
-                                                               g_conf.EXPERIMENT_NAME, 'checkpoints')):
+        if f'{next_check}.pth' in os.listdir(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME,
+                                                          g_conf.EXPERIMENT_NAME, 'checkpoints')):
             # now check if someone is writing to it, if it is the case return false
             return not is_open(os.path.join('_logs', g_conf.EXPERIMENT_BATCH_NAME, g_conf.EXPERIMENT_NAME,
                                             'checkpoints', f'{next_check}.pth'))
