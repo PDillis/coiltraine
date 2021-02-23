@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import os
+import csv
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -97,14 +98,12 @@ def check_finish(process, drive_name=None):
     if process != 'drive' and process != 'train':
         raise ValueError('Wrong process to write finish')
 
-    root_path = "_logs"
+    full_path_name = os.path.join("_logs", EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME)
 
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME)
     if drive_name is not None:
         process += '_' + drive_name
 
-    file_name = os.path.join(full_path_name, process + "_finish.csv")
+    file_name = os.path.join(full_path_name, f"{process}_finish.csv")
     return os.path.exists(file_name)
 
 
@@ -117,9 +116,7 @@ def write_on_csv(checkpoint_name, output):
         output: what is being written on the file
     Returns:
     """
-    root_path = "_logs"
-
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME, f'{PROCESS_NAME}_csv')
+    full_path_name = os.path.join("_logs", EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME, f'{PROCESS_NAME}_csv')
 
     file_name = os.path.join(full_path_name, str(checkpoint_name) + '.csv')
 
@@ -130,23 +127,26 @@ def write_on_csv(checkpoint_name, output):
         f.write("\n")
 
 
-def write_on_error_csv(error_file_name, output):
+def write_on_error_csv(error_file_name, data, iteration):
     """
     Keep the errors writen to quickly recover
     Args
         dataset_name: the name of the checkpoint being writen
-        output: what is being written on the file
+        data: what is being written on the file
+        iteration: the iteration of the data
     Returns:
     """
-    root_path = "_logs"
-
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME)
+    full_path_name = os.path.join("_logs", EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME)
 
     file_name = os.path.join(full_path_name, f'{error_file_name}_error.csv')
 
-    with open(file_name, 'a+') as f:
-        f.write("%f" % output)
-        f.write("\n")
+    file = open(file_name, 'a+')
+    with file:
+        writer = csv.writer(file)
+        if isinstance(data, list) or isinstance(data, tuple):
+            writer.writerow([iteration, *data])
+        else:
+            writer.writerow([iteration, data])
 
 
 def write_stop(validation_dataset, checkpoint):
@@ -158,12 +158,9 @@ def write_stop(validation_dataset, checkpoint):
         output: what is being written on the file
     Returns:
     """
-    root_path = "_logs"
+    full_path_name = os.path.join("_logs", EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME)
 
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME)
-
-    file_name = os.path.join(full_path_name, "validation_" + validation_dataset + "_stale.csv")
+    file_name = os.path.join(full_path_name, f"validation_{validation_dataset}_stale.csv")
 
     with open(file_name, 'w') as f:
         f.write("%d\n" % checkpoint)
@@ -171,29 +168,25 @@ def write_stop(validation_dataset, checkpoint):
 
 def erase_csv(checkpoint_name):
     """
-    We also create the posibility to erase certain checkpoints
+    We also create the possibility to erase certain checkpoints
     Args
         checkpoint_name: the name of the checkpoint being writen
 
     Returns:
 
     """
-    root_path = "_logs"
+    full_path_name = os.path.join("_logs", EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME, f'{PROCESS_NAME}_csv')
 
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME, PROCESS_NAME + '_csv')
-
-    file_name = os.path.join(full_path_name, str(checkpoint_name) + '.csv')
+    file_name = os.path.join(full_path_name, f'{checkpoint_name}.csv')
 
     os.remove(file_name)
 
 
 def recover_loss_window(dataset_name, iteration):
 
-    root_path = "_logs"
-    full_path_name = os.path.join(root_path, EXPERIMENT_BATCH_NAME,
-                                  EXPERIMENT_NAME)
-    file_name = os.path.join(full_path_name, str(dataset_name) + '_error' + '.csv')
+    full_path_name = os.path.join("_logs", EXPERIMENT_BATCH_NAME, EXPERIMENT_NAME)
+
+    file_name = os.path.join(full_path_name, f'{dataset_name}_error.csv')
     if not os.path.exists(file_name):
         return []
     recovered_list = list(np.loadtxt(file_name))[0:iteration]

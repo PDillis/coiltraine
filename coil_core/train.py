@@ -1,5 +1,5 @@
 import os
-import sys
+
 import random
 import time
 import traceback
@@ -132,17 +132,18 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             if iteration % 1000 == 0:
                 adjust_learning_rate_auto(optimizer, loss_window, coil_logger)
 
-            # get the control commands from float_data, size = [120,1]
-
             capture_time = time.time()
-            controls = data['directions']
-            # The output(branches) is a list of 5 branches results, each branch is with size [120,3]
+
+            # get the control commands from float_data, size = [g_conf.BATCH_SIZE, len(g_conf.INPUTS)]
+            controls = data['directions'].cuda()
+            # The output(branches) is a list of 5 branches results, each branch is with size
+            # [g_conf.BATCH_SIZE, len(g_conf.TARGETS)]
             model.zero_grad()
             branches = model(torch.squeeze(data['rgb'].cuda()), dataset.extract_inputs(data).cuda())
             loss_function_params = {
                 'branches': branches,
                 'targets': dataset.extract_targets(data).cuda(),
-                'controls': controls.cuda(),
+                'controls': controls,
                 'inputs': dataset.extract_inputs(data).cuda(),
                 'branch_weights': g_conf.BRANCH_LOSS_WEIGHT,
                 'variable_weights': g_conf.VARIABLE_WEIGHT
@@ -157,7 +158,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                 These logs are monitored by the printer module.
                 #################################################
             """
-            coil_logger.add_scalar(tag='Loss', value=loss.data, iteration=iteration)
+            coil_logger.add_scalar(tag=f'Training Loss ({g_conf.LOSS_FUNCTION})', value=loss.data, iteration=iteration)
             coil_logger.add_image(tag='Image', images=torch.squeeze(data['rgb']), iteration=iteration)
             if loss.data < best_loss:
                 best_loss = loss.data.tolist()
@@ -175,7 +176,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
             coil_logger.add_scalar(tag='Error brake', value=error[2], iteration=iteration)
             coil_logger.add_message(phase='Iterating',
                                     message={'Iteration': iteration,
-                                             'Loss': loss.data.tolist(),
+                                             f'Loss ({g_conf.LOSS_FUNCTION})': loss.data.tolist(),
                                              'Images/s': (iteration * g_conf.BATCH_SIZE) / accumulated_time,
                                              'BestLoss': best_loss, 'BestLossIteration': best_loss_iter,
                                              'Output': output[position].data.tolist(),
@@ -184,7 +185,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
                                              'Inputs': dataset.extract_inputs(data)[position].data.tolist()},
                                     iteration=iteration)
             loss_window.append(loss.data.tolist())
-            coil_logger.write_on_error_csv(error_file_name='train', output=loss.data)
+            coil_logger.write_on_error_csv(error_file_name='train', data=loss.data, iteration=iteration)
             """
             ######################################
                         Saving the model 

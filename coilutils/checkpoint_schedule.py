@@ -98,16 +98,16 @@ def is_next_checkpoint_ready(checkpoint_schedule, control_filename=None):
 
 
 def get_next_checkpoint(checkpoint_schedule, filename=None):
-    ltst_check = get_latest_evaluated_checkpoint(filename)
-    if ltst_check is None:
+    latest_check = get_latest_evaluated_checkpoint(filename)
+    if latest_check is None:
         return checkpoint_schedule[0]
 
-    if checkpoint_schedule.index(ltst_check) + 1 == len(checkpoint_schedule):
+    if checkpoint_schedule.index(latest_check) + 1 == len(checkpoint_schedule):
         raise RuntimeError("Not able to get next checkpoint, maximum checkpoint is reach")
 
-    print(checkpoint_schedule.index(ltst_check))
-    print(ltst_check)
-    return checkpoint_schedule[checkpoint_schedule.index(ltst_check) + 1]
+    print(checkpoint_schedule.index(latest_check))
+    print(latest_check)
+    return checkpoint_schedule[checkpoint_schedule.index(latest_check) + 1]
 
 
 def check_loss_validation_stopped(checkpoint, validation_name):

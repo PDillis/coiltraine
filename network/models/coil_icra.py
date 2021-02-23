@@ -33,15 +33,17 @@ class CoILICRA(nn.Module):
 
         # For this case we check if the perception layer is of the type "conv"
         if 'conv' in params['perception']:
-            perception_convs = Conv(params={'channels': [number_first_layer_channels] + params['perception']['conv']['channels'],
-                                            'kernels': params['perception']['conv']['kernels'],
-                                            'strides': params['perception']['conv']['strides'],
-                                            'dropouts': params['perception']['conv']['dropouts'],
-                                            'end_layer': True})
+            perception_convs = Conv(params={
+                'channels': [number_first_layer_channels] + params['perception']['conv']['channels'],
+                'kernels': params['perception']['conv']['kernels'],
+                'strides': params['perception']['conv']['strides'],
+                'dropouts': params['perception']['conv']['dropouts'],
+                'end_layer': True})
 
-            perception_fc = FC(params={'neurons': [perception_convs.get_conv_output(sensor_input_shape)] + params['perception']['fc']['neurons'],
-                                       'dropouts': params['perception']['fc']['dropouts'],
-                                       'end_layer': False})
+            perception_fc = FC(params={
+                'neurons': [perception_convs.get_conv_output(sensor_input_shape)] + params['perception']['fc']['neurons'],
+                'dropouts': params['perception']['fc']['dropouts'],
+                'end_layer': False})
 
             self.perception = nn.Sequential(*[perception_convs, perception_fc])
 
@@ -57,29 +59,28 @@ class CoILICRA(nn.Module):
 
         else:
 
-            raise ValueError("invalid convolution layer type")
+            raise ValueError("Invalid perception layer type; only convolutional ('conv') or ResNet-based ('res') "
+                             "are allowed)")
 
-        self.measurements = FC(params={'neurons': [len(g_conf.INPUTS)] +
-                                                   params['measurements']['fc']['neurons'],
+        self.intermediate_layers = None
+
+        self.measurements = FC(params={'neurons': [len(g_conf.INPUTS)] + params['measurements']['fc']['neurons'],
                                        'dropouts': params['measurements']['fc']['dropouts'],
                                        'end_layer': False})
 
         self.join = Join(
-            params={'after_process':
-                         FC(params={'neurons':
-                                        [params['measurements']['fc']['neurons'][-1] +
-                                         number_output_neurons] +
-                                        params['join']['fc']['neurons'],
-                                     'dropouts': params['join']['fc']['dropouts'],
-                                     'end_layer': False}),
-                     'mode': 'cat'
-                    }
-         )
+            params={
+                'after_process': FC(params={
+                    'neurons': [params['measurements']['fc']['neurons'][-1] + number_output_neurons] +
+                               params['join']['fc']['neurons'],
+                    'dropouts': params['join']['fc']['dropouts'],
+                    'end_layer': False}),
+                'mode': 'cat'})
 
-        self.speed_branch = FC(params={'neurons': [params['join']['fc']['neurons'][-1]] +
-                                                  params['speed_branch']['fc']['neurons'] + [1],
-                                       'dropouts': params['speed_branch']['fc']['dropouts'] + [0.0],
-                                       'end_layer': True})
+        self.speed_branch = FC(params={
+            'neurons': [params['join']['fc']['neurons'][-1]] + params['speed_branch']['fc']['neurons'] + [1],
+            'dropouts': params['speed_branch']['fc']['dropouts'] + [0.0],
+            'end_layer': True})
 
         # Create the fc vector separately
         branch_fc_vector = []
@@ -106,11 +107,11 @@ class CoILICRA(nn.Module):
 
     def forward(self, x, a):
         """ ###### APPLY THE PERCEPTION MODULE """
-        x, inter = self.perception(x)
+        x, self.intermediate_layers = self.perception(x)
         # Not a variable, just to store intermediate layers for future visualization
         # self.intermediate_layers = inter
 
-        """ ###### APPLY THE MEASUREMENT MODULE """
+        """ APPLY THE MEASUREMENT MODULE """
         m = self.measurements(a)
         """ Join measurements and perception"""
         j = self.join(x, m)
@@ -127,9 +128,9 @@ class CoILICRA(nn.Module):
         Do a forward operation and return a single branch.
 
         Args:
-            x: the image input
-            a: speed measurement
-            branch_number: the branch number to be returned
+            x: the image input (torch.squeeze(data['rgb']))
+            a: speed measurement (dataset.extract_inputs(data))
+            branch_number: the branch number to be returned (data['directions'])
 
         Returns:
             the forward operation on the selected branch
@@ -144,7 +145,7 @@ class CoILICRA(nn.Module):
 
     @staticmethod
     def extract_branch(output_vec, branch_number):
-
+        # Extract
         branch_number = command_number_to_index(branch_number)
 
         if len(branch_number) > 1:

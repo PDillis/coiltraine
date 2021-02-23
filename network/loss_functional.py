@@ -19,10 +19,10 @@ def weight_decay_l1(loss, model, intention_factors, alpha, gating):
         intention = (1. > intention).float()
         if gating == 'hard':
             # Multiply by a factor proportional to the size of the number of non 1
-            wdecay = wdecay * intention.shape[0]/torch.sum(intention)
+            wdecay = wdecay * intention.shape[0] / torch.sum(intention)
 
         elif gating == 'easy':
-            wdecay = wdecay * torch.sum(intention)/intention.shape[0]
+            wdecay = wdecay * torch.sum(intention) / intention.shape[0]
 
     loss = torch.add(loss, alpha * wdecay)
     return loss
@@ -41,10 +41,10 @@ def weight_decay_l2(loss, model, intention_factors, alpha, gating):
         intention = (1. > intention).float()
         if gating == 'hard':
             # Multiply by a factor proportional to the size of the number of non 1
-            wdecay = wdecay * intention.shape[0]/torch.sum(intention)
+            wdecay = wdecay * intention.shape[0] / torch.sum(intention)
 
         elif gating == 'easy':
-            wdecay = wdecay * torch.sum(intention)/intention.shape[0]
+            wdecay = wdecay * torch.sum(intention) / intention.shape[0]
 
     loss = torch.add(loss, alpha * wdecay)
     return loss
@@ -56,35 +56,41 @@ def compute_branches_masks(controls, number_targets):
         Args
             controls
             the control values that have the following structure
-            command flags: 2 - follow lane; 3 - turn left; 4 - turn right; 5 - go straight
+            command flags: 2 - follow lane; 3 - turn left; 4 - turn right; 5 - go straight; these will activate the
+            respective branch in the network
             size of targets:
             How many targets is produced by the network so we can produce the masks properly
         Returns
-            a mask to have the loss function applied
-            only on over the correct branch.
+            a mask to have the loss function applied on only over the correct branch.
     """
     controls_masks = []
 
-    # when command = 2, branch 1 (follow lane) is activated
-    controls_b1 = (controls == 2)
-    controls_b1 = torch.tensor(controls_b1, dtype=torch.float32).cuda()
-    controls_b1 = torch.cat([controls_b1] * number_targets, 1)
-    controls_masks.append(controls_b1)
-    # when command = 3, branch 2 (turn left) is activated
-    controls_b2 = (controls == 3)
-    controls_b2 = torch.tensor(controls_b2, dtype=torch.float32).cuda()
-    controls_b2 = torch.cat([controls_b2] * number_targets, 1)
-    controls_masks.append(controls_b2)
-    # when command = 4, branch 3 (turn right) is activated
-    controls_b3 = (controls == 4)
-    controls_b3 = torch.tensor(controls_b3, dtype=torch.float32).cuda()
-    controls_b3 = torch.cat([controls_b3] * number_targets, 1)
-    controls_masks.append(controls_b3)
-    # when command = 5, branch 4 (go strange) is activated
-    controls_b4 = (controls == 5)
-    controls_b4 = torch.tensor(controls_b4, dtype=torch.float32).cuda()
-    controls_b4 = torch.cat([controls_b4] * number_targets, 1)
-    controls_masks.append(controls_b4)
+    # # when command = 2, branch 1 (follow lane) is activated
+    # controls_b1 = (controls == 2)
+    # controls_b1 = torch.tensor(controls_b1, dtype=torch.float32).cuda()
+    # controls_b1 = torch.cat([controls_b1] * number_targets, 1)
+    # controls_masks.append(controls_b1)
+    # # when command = 3, branch 2 (turn left) is activated
+    # controls_b2 = (controls == 3)
+    # controls_b2 = torch.tensor(controls_b2, dtype=torch.float32).cuda()
+    # controls_b2 = torch.cat([controls_b2] * number_targets, 1)
+    # controls_masks.append(controls_b2)
+    # # when command = 4, branch 3 (turn right) is activated
+    # controls_b3 = (controls == 4)
+    # controls_b3 = torch.tensor(controls_b3, dtype=torch.float32).cuda()
+    # controls_b3 = torch.cat([controls_b3] * number_targets, 1)
+    # controls_masks.append(controls_b3)
+    # # when command = 5, branch 4 (go straight) is activated
+    # controls_b4 = (controls == 5)
+    # controls_b4 = torch.tensor(controls_b4, dtype=torch.float32).cuda()
+    # controls_b4 = torch.cat([controls_b4] * number_targets, 1)
+    # controls_masks.append(controls_b4)
+
+    for i in range(2, 6):
+        control = (controls == i)
+        control = torch.tensor(control, dtype=torch.float32).cuda()
+        control = torch.cat([control] * number_targets, 1)
+        controls_masks.append(control)
 
     return controls_masks
 
@@ -96,8 +102,8 @@ def l2_loss(params):
             params dictionary that should include:
                 branches: The tensor containing all the branches branches output from the network
                 targets: The ground truth targets that the network should produce
-                controls_mask: the masked already expliciting the branches tha are going to be used
-                branches weights: the weigths that each branch will have on the loss function
+                controls_mask: the mask delimiting the branches that are going to be used
+                branches weights: the weights that each branch will have on the loss function
                 speed_gt: the ground truth speed for these data points
 
         Returns
@@ -107,14 +113,13 @@ def l2_loss(params):
     """ It is a vec for each branch"""
     loss_branches_vec = []
     # TODO This is hardcoded but all our cases rigth now uses four branches
-    for i in range(len(params['branches']) -1):
-        loss_branches_vec.append(((params['branches'][i] - params['targets']) **2
-                                           * params['controls_mask'][i])
+    for i in range(len(params['branches']) - 1):
+        loss_branches_vec.append(((params['branches'][i] - params['targets']) **2 * params['controls_mask'][i])
                                  * params['branch_weights'][i])
     """ The last branch is a speed branch"""
     # TODO: Activate or deactivate speed branch loss
-    loss_branches_vec.append((params['branches'][-1] - params['inputs']) ** 2
-                             * params['branch_weights'][-1])
+    loss_branches_vec.append((params['branches'][-1] - params['inputs']) ** 2 * params['branch_weights'][-1])
+
     return loss_branches_vec, {}
 
 
@@ -125,7 +130,7 @@ def l1_loss(params):
             params dictionary that should include:
                 branches: The tensor containing all the branches branches output from the network
                 targets: The ground truth targets that the network should produce
-                controls_mask: the masked already expliciting the branches tha are going to be used
+                controls_mask: the mask delimiting the branches that are going to be used
                 branches weights: the weights that each branch will have on the loss function
                 speed_gt: the ground truth speed for these data points
 
@@ -135,12 +140,12 @@ def l1_loss(params):
     """
     """ It is a vec for each branch"""
     loss_branches_vec = []
-    # TODO This is hardcoded but all our cases right now uses four branches
-    for i in range(len(params['branches']) -1):
+    # TODO This is hardcoded but all our cases right now use four branches
+    for i in range(len(params['branches']) - 1):
         loss_branches_vec.append(torch.abs((params['branches'][i] - params['targets']) * params['controls_mask'][i])
                                  * params['branch_weights'][i])
     """ The last branch is a speed branch"""
     # TODO: Activate or deactivate speed branch loss
     loss_branches_vec.append(torch.abs(params['branches'][-1] - params['inputs']) * params['branch_weights'][-1])
-    return loss_branches_vec, {}
 
+    return loss_branches_vec, {}

@@ -16,7 +16,6 @@ def compare(x, y):
     return collections.Counter(x) == collections.Counter(y)
 
 
-
 # Constants Used for the high level commands
 
 
@@ -32,7 +31,8 @@ def angle_between(v1, v2):
     return np.arccos(np.dot(v1, v2) / np.linalg.norm(v1) / np.linalg.norm(v2))
 
 
-def sldist(c1, c2): return math.sqrt((c2[0] - c1[0]) ** 2 + (c2[1] - c1[1]) ** 2)
+def sldist(c1, c2):
+    return math.sqrt((c2[0] - c1[0]) ** 2 + (c2[1] - c1[1]) ** 2)
 
 
 def signal(v1, v2):
@@ -67,9 +67,7 @@ class Planner(object):
         if self._city_track.is_at_goal(track_source, track_target):
             return REACH_GOAL
 
-
-        if (self._city_track.is_at_new_node(track_source)
-                and self._city_track.is_away_from_intersection(track_source)):
+        if (self._city_track.is_at_new_node(track_source) and self._city_track.is_away_from_intersection(track_source)):
 
             route = self._city_track.compute_route(track_source, source_ori,
                                                    track_target, target_ori)
@@ -121,10 +119,9 @@ class Planner(object):
 
         # We multiply by these values to convert distance to world coordinates
 
-        return distance * float(self._city_track.get_pixel_density()) \
-               * float(self._city_track.get_node_density())
+        return distance * float(self._city_track.get_pixel_density()) * float(self._city_track.get_node_density())
 
-    def is_there_posible_route(self, source, source_ori, target, target_ori):
+    def is_there_possible_route(self, source, source_ori, target, target_ori):
 
         track_source = self._city_track.project_node(source)
         track_target = self._city_track.project_node(target)
@@ -157,10 +154,8 @@ class Planner(object):
             past = route[i - 1]
             future = route[i + 1]
 
-            past_to_current = np.array(
-                [current[0] - past[0], current[1] - past[1]])
-            current_to_future = np.array(
-                [future[0] - current[0], future[1] - current[1]])
+            past_to_current = np.array([current[0] - past[0], current[1] - past[1]])
+            current_to_future = np.array([future[0] - current[0], future[1] - current[1]])
             angle = signal(current_to_future, past_to_current)
 
             if angle < -0.1:

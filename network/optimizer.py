@@ -46,7 +46,7 @@ def adjust_learning_rate_auto(optimizer, loss_window, coil_logger):
         n += 1000
 
     learning_rate = max(learning_rate, minlr)
-    coil_logger.add_scalar('Learning rate', learning_rate, len(loss_window))
+    coil_logger.add_message('Learning rate', {'lr': learning_rate})
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = learning_rate

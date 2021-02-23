@@ -22,26 +22,25 @@ def branched_loss(loss_function, params):
                 branches: The tensor containing all the branches branches output from the network
                 targets: The ground truth targets that the network should produce
                 controls: the controls used for each point
-                branches weights: the weigths that each branch will have on the loss function
+                branches weights: the weights that each branch will have on the loss function
                 speed_gt: the ground truth speed for these data points
                 variable_weights: The weights for each of the variables used
 
                 For other losses it could contain more parameters
 
     Returns
-        The computed loss function, but also a dictionary with plotable variables for tensorboard
+        The computed loss function, but also a dictionary with plottable variables for tensorboard
     """
-    controls_mask = LF.compute_branches_masks(params['controls'],
-                                              params['branches'][0].shape[1])
+    controls_mask = LF.compute_branches_masks(params['controls'], params['branches'][0].shape[1])
     # Update the dictionary to add also the controls mask.
     params.update({'controls_mask': controls_mask})
 
     # calculate loss for each branch with specific activation
-    loss_branches_vec, plotable_params = loss_function(params)
+    loss_branches_vec, plottable_params = loss_function(params)
 
     # Apply the variable weights
     # This is applied to all branches except the last one, that is the speed branch...
-    # TODO This is hardcoded to  have 4 branches not using speed.
+    # TODO This is hardcoded to have 4 branches not using speed.
 
     for i in range(4):
         loss_branches_vec[i] = loss_branches_vec[i][:, 0] * params['variable_weights']['Steer'] \
@@ -53,7 +52,7 @@ def branched_loss(loss_function, params):
     speed_loss = loss_branches_vec[4] / (params['branches'][0].shape[0])
 
     return torch.sum(loss_function) / (params['branches'][0].shape[0]) \
-           + torch.sum(speed_loss) / (params['branches'][0].shape[0]), plotable_params
+           + torch.sum(speed_loss) / (params['branches'][0].shape[0]), plottable_params
 
 
 def Loss(loss_name):
@@ -73,6 +72,6 @@ def Loss(loss_name):
         return l2
 
     else:
-        raise ValueError(" Not found Loss name")
+        raise ValueError("Loss not found; available losses: L1 and L2")
 
 
