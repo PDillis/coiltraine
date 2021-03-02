@@ -3,80 +3,122 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import argparse
+import sys
 import os
+import re
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 from coil_core import execute_train, execute_validation, execute_drive, folder_execute
 from coilutils.general import create_log_folder, create_exp_path, erase_logs,\
                           erase_wrong_plotting_summaries, erase_validations
 
-# You could send the module to be executed and they could have the same interface.
+# TODO: make it clearer what args are for each command, otherwise it's a nightmare as a user; finish the following
+_examples = '''examples:
+    # Train a model with a configuration file
+    python %(prog)s train --gpus 0 --folder ETE --exp ETE_resnet50_1
+    # Validate a trained model with the dataset in the configuration file
+    python %(prog)s validate --gpus 0 --folder ETE --exp ETE_resnet50_1
+    # Drive a trained model
+    python %(prog)s drive --gpus 0 
+'''
 
-if __name__ == '__main__':
+
+def _parse_num_range(s):
+    # string s will be either a range '0-3', so we match with regular expression
+    range_re = re.compile(r'^(\d+)-(\d+)$')
+    m = range_re.match(s)
+    if m:
+        return range(int(m.group(1)), int(m.group(2)) + 1)
+    # Or s will be a comma-separated list of numbers '0,2,3'
+    values = s.split(',')
+    return [int(x) for x in values]
+
+
+def main():
+    # parser = argparse.ArgumentParser(description=__doc__, epilog=_examples,
+    #                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    #
+    # subparsers = parser.add_subparsers(help='Sub-commands', dest='command')
+    #
+    # parser_train = subparsers.add_parser('train', help='Train the model.')
+    # parser_train.add_argument('--gpus', type=_parse_num_range)
+    # parser_train.set_defaults(func=execute_train)
+    #
+    # parser_validate = subparsers.add_parser('validate', help='Validate a pretrained model.')
+    # parser_validate.set_defaults(func=execute_validation)
+    #
+    # parser_drive = subparsers.add_parser('drive', help='Drive with a pretrained model.')
+    # parser_drive.set_defaults(func=execute_drive)
+    #
+    # args = parser.parse_args()
+    # kwargs = vars(args)
+    # subcommand = kwargs.pop('command')
+    #
+    # if subcommand is None:
+    #     print('Error: missing subcommand. Re-run with --help for usage.')
+    #     sys.exit(1)
+    #
+    # func = kwargs.pop('func')
+    # func(**kwargs)
+
     argparser = argparse.ArgumentParser(description=__doc__)
 
     argparser.add_argument(
-        '--single-process',
+        '--single-process',  # to be replaced with subcommands (see above)
         help='Choose between training your model (train), validating (validation), or drive (drive).',
         default='train',
         type=str,
         required=True
     )
     argparser.add_argument(
-        '--gpus',
+        '--gpus',  # execute_{train, validation, drive}, folder_execute (hence more than one gpu)
         nargs='+',
         dest='gpus',
         type=str
     )
     argparser.add_argument(
         '-f',
-        '--folder',
-        type=str
+        '--folder',  # execute_{train, validation, drive}, folder_execute
+        type=str,
+        required=True
     )
     argparser.add_argument(
         '-e',
-        '--exp',
+        '--exp',  # execute_{train, validation, drive}
         type=str
     )
     argparser.add_argument(
         '-vd',
-        '--val-datasets',
+        '--val-datasets',  # folder_execute; args.erase_bad_validations and args.restart_validation
         dest='validation_datasets',
         nargs='+',
         default=[]
     )
     argparser.add_argument(
         '--no-train',
-        dest='is_training',
+        dest='is_training',  # folder_execute
         action='store_false'
     )
     argparser.add_argument(
         '-de',
-        '--drive-envs',
+        '--drive-envs',  # execute_drive, folder_execute
         dest='driving_environments',
         nargs='+',
         default=[]
     )
     argparser.add_argument(
-        '-v', '--verbose',
+        '-v', '--verbose',  # not used???
         action='store_true',
         dest='debug',
         help='print debug information')
-
     argparser.add_argument(
-        '-ns', '--no-screen',
-        action='store_true',
-        dest='no_screen',
-        help='Set to carla to run offscreen'
-    )
-    argparser.add_argument(
-        '-ebv', '--erase-bad-validations',
+        '-ebv', '--erase-bad-validations',  # Add all of this before the validation code
         action='store_true',
         dest='erase_bad_validations',
         help='erase the bad validations (Incomplete)'
     )
     argparser.add_argument(
-        '-rv', '--restart-validations',
+        '-rv', '--restart-validations',  # Ibidem
         action='store_true',
         dest='restart_validations',
         help='Set to carla to run offscreen'
@@ -84,20 +126,26 @@ if __name__ == '__main__':
     argparser.add_argument(
         '-gv',
         '--gpu-value',
-        dest='gpu_value',
+        dest='gpu_value',  # folder_execute
         type=float,
         default=3.5
     )
     argparser.add_argument(
         '-nw',
         '--number-of-workers',
-        dest='number_of_workers',
+        dest='number_of_workers',  # execute_train, folder_execute
         type=int,
         default=12
     )
     argparser.add_argument(
+        '-ns', '--no-screen',
+        action='store_true',
+        dest='no_screen',  # execute_drive (params)
+        help='Set to carla to run offscreen'
+    )
+    argparser.add_argument(
         '-dk', '--docker',
-        dest='docker',
+        dest='docker',  # execute_drive (params)
         default='carlasim/carla:0.8.4',
         type=str,
         help='Set to run carla using docker'
@@ -105,21 +153,18 @@ if __name__ == '__main__':
     argparser.add_argument(
         '-rc', '--record-collisions',
         action='store_true',
-        dest='record_collisions',
+        dest='record_collisions',  # execute_drive (params)
         help='Set to run carla using docker'
     )
     args = argparser.parse_args()
 
-    # Check if the vector of GPUs passed are valid.
+    # TODO: Combine this into _parse_num_range
+    # Check if the list of GPUs is valid (they are all ints)
     for gpu in args.gpus:
         try:
             int(gpu)
-        except ValueError:  # Reraise a meaningful error.
-            raise ValueError("GPU is not a valid int number")
-
-    # Check if the mandatory folder argument is passed
-    if args.folder is None:
-        raise ValueError("You should set a folder name where the experiments are placed")
+        except ValueError:
+            raise ValueError(f"GPU {gpu} is not a valid int number")
 
     # Check if the driving parameters are passed in a correct way
     if args.driving_environments is not None:
@@ -144,8 +189,6 @@ if __name__ == '__main__':
         if args.exp is None:
             raise ValueError(" You should set the exp alias when using single process")
 
-        create_exp_path(args.folder, args.exp)
-
         if args.single_process == 'train':
             execute_train(gpu=args.gpus[0], exp_folder=args.folder, exp_alias=args.exp,
                           suppress_output=False, number_of_workers=args.number_of_workers)
@@ -161,7 +204,8 @@ if __name__ == '__main__':
                 "docker": args.docker,
                 "record_collisions": args.record_collisions
             }
-            execute_drive("0", args.folder, args.exp, list(args.driving_environments)[0], drive_params)
+            execute_drive(gpu=args.gpus[0], exp_folder=args.folder, exp_alias=args.exp,
+                          exp_set_name=list(args.driving_environments)[0], params=drive_params)
 
         else:
             raise Exception("Invalid name for single process, chose from (train, validation, test)")
@@ -192,3 +236,7 @@ if __name__ == '__main__':
 
         folder_execute(params)
         print("SUCCESSFULLY RAN ALL EXPERIMENTS")
+
+
+if __name__ == '__main__':
+    main()

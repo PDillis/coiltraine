@@ -28,11 +28,13 @@ class TestT1(ExperimentSuite):
     @property
     def test_weathers(self):
         return []
+
     @property
     def collision_as_failure(self):
         return True
-    def _poses(self):
 
+    @staticmethod
+    def _poses():
         return [[[36, 40], [39, 35]]]
 
     def build_experiments(self):

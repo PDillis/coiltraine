@@ -23,7 +23,7 @@ try:
     if not CARLA_ROOT:
         logging.warning('Define environment variable CARLA_ROOT pointing to the CARLA base folder.')
 
-    sys.path.append(glob.glob('{}/PythonAPI'.format(CARLA_ROOT))[0])
+    sys.path.append(glob.glob(f'{CARLA_ROOT}/PythonAPI')[0])
 except IndexError:
     pass
 # We  need to add two things here to the python path,
@@ -50,13 +50,13 @@ class CoILBaseline(AutonomousAgent):
         yaml_conf, checkpoint_number = checkpoint_parse_configuration_file(path_to_config_file)
 
         # Take the checkpoint name and load it
-        checkpoint = torch.load(os.path.join('/', os.path.join(*os.path.realpath(__file__).split('/')[:-2]),
+        checkpoint = torch.load(os.path.join(os.sep, os.path.join(*os.path.realpath(__file__).split(os.sep)[:-2]),
                                               '_logs',
-                                             yaml_conf.split('/')[-2], yaml_conf.split('/')[-1].split('.')[-2]
+                                             yaml_conf.split(os.sep)[-2], yaml_conf.split('/')[-1].split('.')[-2]
                                              , 'checkpoints', str(checkpoint_number) + '.pth'))
 
         # do the merge here
-        merge_with_yaml(os.path.join('/', os.path.join(*os.path.realpath(__file__).split('/')[:-2]),
+        merge_with_yaml(os.path.join(os.sep, os.path.join(*os.path.realpath(__file__).split(os.sep)[:-2]),
                                      yaml_conf))
 
         self.checkpoint = checkpoint  # We save the checkpoint for some interesting future use.

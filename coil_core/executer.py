@@ -26,7 +26,7 @@ def execute_train(gpu, exp_folder, exp_alias, suppress_output=True, number_of_wo
     p.start()
 
 
-def execute_validation(gpu, exp_folder, exp_alias, suppress_output=True):
+def execute_validation(gpu, exp_folder, exp_alias,  suppress_output=True):
     """
     Args:
         gpu: The gpu being used for this execution.

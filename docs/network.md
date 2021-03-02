@@ -8,7 +8,7 @@ the architecture. A few key attributes can be changed
 
 * MODEL TYPE: The type of model with some training strategy related to it,
  right now we just have  [coil-icra](https://arxiv.org/pdf/1710.02410.pdf)
-  that has 4 subdivisions: percetion, measurements, join and branching.
+  that has 4 subdivisions: perception, measurements, join and branching.
 * MODEL CONFIGURATION: Specify all the network
 
 Example:
@@ -71,7 +71,7 @@ Sample:
 #### Optimizer
 
 For the optimizer we have [adam](https://arxiv.org/abs/1412.6980) hardcoded.
-You can configure the start learning rate and also a
+You can configure the start learning rate and also an
 interval where the base learning rate is reduced.
 
 

@@ -1,4 +1,3 @@
-
 import traceback
 
 import sys
@@ -171,7 +170,7 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
         if not os.path.exists('_output_logs'):
             os.mkdir('_output_logs')
 
-        merge_with_yaml(os.path.join('configs', exp_batch, exp_alias + '.yaml'))
+        merge_with_yaml(os.path.join('configs', exp_batch, f'{exp_alias}.yaml'))
 
         exp_set_name, town_name = drive_conditions.split('_')
 
