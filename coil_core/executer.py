@@ -5,7 +5,7 @@ import heapq
 
 from coilutils.experiment_schedule import get_gpu_resources, allocate_gpu_resources, \
     mount_experiment_heap
-from coilutils.general import create_exp_path
+from coilutils.general import create_exp_path, create_log_folder, erase_wrong_plotting_summaries, erase_validations
 from logger import printer, monitorer
 
 from . import train, validate, run_drive
@@ -15,51 +15,68 @@ def execute_train(gpu, exp_folder, exp_alias, suppress_output=True, number_of_wo
     """
     Args:
         gpu: The gpu being used for this execution.
-        module_name: The module name, if it is train, drive or evaluate
-        exp_alias: The experiment alias, file name, to be executed.
-        path: The path were the datasets are
+        exp_folder: Folder name in configs
+        exp_alias: The experiment alias (yaml file)
+        suppress_output:
+        number_of_workers:
     Returns:
     """
+    create_log_folder(exp_folder)
     create_exp_path(exp_folder, exp_alias)
     p = multiprocessing.Process(target=train.execute,
                                 args=(gpu, exp_folder, exp_alias, suppress_output, number_of_workers))
     p.start()
 
 
-def execute_validation(gpu, exp_folder, exp_alias,  suppress_output=True):
+def execute_validation(gpu, exp_folder, exp_alias, validation_datasets, erase_bad_validations, restart_validations, suppress_output=True):
     """
     Args:
         gpu: The gpu being used for this execution.
-        module_name: The module name, if it is train, drive or evaluate
+        exp_folder: The folder this driving experiment is being executed
         exp_alias: The experiment alias, file name, to be executed.
-        path: The path were the datasets are
+        validation_datasets: Validation datasets to be deleted/restarted
+        erase_bad_validations:
+        restart_validations:
+        suppress_output:
     Returns:
     """
+    create_log_folder(exp_folder)
     create_exp_path(exp_folder, exp_alias)
+    if erase_bad_validations:
+        erase_wrong_plotting_summaries(exp_folder, validation_datasets)
+    if restart_validations:
+        erase_validations(exp_folder, validation_datasets)
     # The difference between train and validation is the
     p = multiprocessing.Process(target=validate.execute,
                                 args=(gpu, exp_folder, exp_alias, suppress_output))
     p.start()
 
 
-def execute_drive(gpu, exp_folder, exp_alias, exp_set_name, params):
+def execute_drive(gpu, exp_folder, exp_alias, exp_set_name, suppress_output, docker, record_collisions, no_screen):
     """
     Args:
         gpu: The gpu being used for this execution.
-        exp_folder: the folder this driving experiment is being executed
+        exp_folder: The folder this driving experiment is being executed
         exp_alias: The experiment alias, file name, to be executed.
-        params: all the rest of parameter, if there is recording and etc.
+        exp_set_name:
+        suppress_output:
+        docker:
+        record_collisions:
+        no_screen:
     Returns:
     """
-    params.update({'host': "127.0.0.1"})
+    create_log_folder(exp_folder)
     create_exp_path(exp_folder, exp_alias)
     p = multiprocessing.Process(target=run_drive.execute,
-                                args=(gpu, exp_folder, exp_alias, exp_set_name,
-                                      params))
+                                args=(gpu, exp_folder, exp_alias, exp_set_name, suppress_output,
+                                      docker, record_collisions, no_screen))
     p.start()
 
 
-def folder_execute(params=None):
+# TODO: Finish this or delete it
+def folder_execute(exp_folder, exp_set_name, gpus, validation_datasets, driving_environments, is_training,
+                   number_of_workers, suppress_output, docker, record_collisions, no_screen,
+                   erase_bad_validations, restart_validations):
     """
     Execute a folder of experiments. It will execute trainings and
     all the selected evaluations for each of the models present on the folder.
@@ -73,18 +90,20 @@ def folder_execute(params=None):
             validation_datasets: the validation datasets that are going to be validated
                                  per experiment
             driving_environments: The driving environments where the models are going to be tested.
+            record_collisions:
+            no_screen:
+            erase_bad_validations:
+            restart_validations:
 
     """
-    folder = params['folder']
-    allocated_gpus = params['gpus']
-    validation_datasets = params['validation_datasets']
-    driving_environments = params['driving_environments']
-    allocation_parameters = params['allocation_parameters']
+    # We set by default that each gpu has a value of 3.5, allowing a training and a driving/validation
+    allocation_parameters = {'gpu_value': 3.5, 'train_cost': 1.5, 'validation_cost': 1.0, 'drive_cost': 1.5}
 
-    experiments_list = os.listdir(os.path.join('configs', folder))
+    create_log_folder(exp_folder)
+    experiments_list = os.listdir(os.path.join('configs', exp_folder))
     experiments_list = [experiment.split('.')[-2] for experiment in experiments_list]
 
-    allocated_gpus = {gpu: allocation_parameters['gpu_value'] for gpu in allocated_gpus}
+    allocated_gpus = {gpu: allocation_parameters['gpu_value'] for gpu in gpus}
 
     executing_processes = []
 
@@ -92,11 +111,9 @@ def folder_execute(params=None):
                                                                                    executing_processes,
                                                                                    allocation_parameters)
 
-    # Is a queue of tasks to be executed. The priority is always train.
-    # then test then val.
-    tasks_queue = mount_experiment_heap(folder, experiments_list, params['is_training'],
-                                        [], [],
-                                        validation_datasets, driving_environments)
+    # Is a queue of tasks to be executed. The priority is always train, then test, then val.
+    tasks_queue = mount_experiment_heap(exp_folder, experiments_list, is_training,
+                                        [], [], validation_datasets, driving_environments)
 
     # No process is executing right now.
 
@@ -113,7 +130,7 @@ def folder_execute(params=None):
             process_specs = popped_thing[2]  # To get directly the dict
 
             # Get the train status, that will affect in scheduling a validation or drive process
-            train_status = monitorer.get_status(folder, process_specs['experiment'], 'train')[0]
+            train_status = monitorer.get_status(exp_folder, process_specs['experiment'], 'train')[0]
             # ADD TRAIN TO EXECUTE
             if process_specs['type'] == 'train' and resources_on_most_free_gpu >= \
                     allocation_parameters['train_cost']:
@@ -121,8 +138,7 @@ def folder_execute(params=None):
                     free_gpus,
                     allocation_parameters['train_cost'])
 
-                execute_train(gpu_number, process_specs['folder'], process_specs['experiment'],
-                              params['number_of_workers'])
+                execute_train(gpu_number, process_specs['folder'], process_specs['experiment'], number_of_workers)
                 process_specs.update({'gpu': gpu_number})
 
                 executing_processes.append(process_specs)
@@ -133,8 +149,9 @@ def folder_execute(params=None):
                          train_status == 'Finished'):
                 free_gpus, resources_on_most_free_gpu, gpu_number = allocate_gpu_resources(
                                             free_gpus, allocation_parameters['drive_cost'])
+
                 execute_drive(gpu_number, process_specs['folder'], process_specs['experiment'],
-                              process_specs['environment'], params['driving_parameters'])
+                              process_specs['environment'], suppress_output, docker, record_collisions, no_screen)
                 process_specs.update({'gpu': gpu_number})
                 executing_processes.append(process_specs)
             # ADD VALIDATION TO EXECUTE
@@ -145,16 +162,16 @@ def folder_execute(params=None):
                 free_gpus, resources_on_most_free_gpu, gpu_number = allocate_gpu_resources(
                                         free_gpus, allocation_parameters['validation_cost'])
                 execute_validation(gpu_number, process_specs['folder'], process_specs['experiment'],
-                                   process_specs['dataset'])
+                                   erase_bad_validations, restart_validations, suppress_output)
                 process_specs.update({'gpu': gpu_number})
                 executing_processes.append(process_specs)
 
-        tasks_queue = mount_experiment_heap(folder, experiments_list, params['is_training'],
+        tasks_queue = mount_experiment_heap(exp_folder, experiments_list, is_training,
                                             executing_processes, tasks_queue,
                                             validation_datasets, driving_environments, False)
 
-        printer.plot_folder_summaries(folder,
-                                      params['is_training'],
+        printer.plot_folder_summaries(exp_folder,
+                                      is_training,
                                       validation_datasets,
                                       driving_environments)
         # Check allocated process, and look which ones finished.

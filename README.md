@@ -69,6 +69,23 @@ agents in CARLA 0.9.X](docs/view_agents.md).
 For doing scenario evaluation in CARLA you must install CARLA 0.8.4 or CARLA 0.8.2 under docker.
 [This tutorial](https://carla.readthedocs.io/en/latest/carla_docker/) explains how to install  CARLA under docker.
 
+### Modifying Dockerfile
+
+In order to be able to create the Docker image of [CARLA 0.9.11](https://carla.org/2020/12/22/release-0.9.11/), first, 
+[download the package](https://github.com/carla-simulator/carla/releases) pertaining your system, then modify the 
+Dockerfile that you find therein. 
+
+```dockerfile
+ENV SDL_VIDEODRIVER=offscreen
+```
+
+Then the Docker image can be created in the command line via:
+
+```commandline
+docker image build -f /path/to/CARLA_0.9.11/Dockerfile -t carla_0911_t01 /path/to/CARLA_0.9.11/
+```
+
+We have named the image via `-t`, so if another name is preferred, you can do so (with caution).
 
 #### Executing
 

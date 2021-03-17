@@ -62,7 +62,7 @@ def start_carla_simulator(gpu, town_name, docker):
 
 
 def driving_benchmark(checkpoint_number, gpu, town_name, experiment_set, exp_batch, exp_alias,
-                      params, control_filename, task_list):
+                      docker, control_filename, task_list):
     """
         The function to run a driving benchmark, it starts a carla process, run a driving
         benchmark with a certain agent, then log the results.
@@ -83,8 +83,7 @@ def driving_benchmark(checkpoint_number, gpu, town_name, experiment_set, exp_bat
 
     try:
         """ START CARLA"""
-        carla_process, port, out = start_carla_simulator(gpu, town_name,
-                                                         params['docker'])
+        carla_process, port, out = start_carla_simulator(gpu, town_name, docker)
 
         checkpoint = torch.load(os.path.join('_logs', exp_batch, exp_alias
                                              , 'checkpoints', str(checkpoint_number) + '.pth'))
@@ -97,7 +96,7 @@ def driving_benchmark(checkpoint_number, gpu, town_name, experiment_set, exp_bat
         run_driving_benchmark(coil_agent, experiment_set, town_name,
                               exp_batch + '_' + exp_alias + '_' + str(checkpoint_number)
                               + '_drive_' + control_filename
-                              , True, params['host'], port)
+                              , True, "127.0.0.1", port)
 
         """ Processing the results to write a summary"""
         path = exp_batch + '_' + exp_alias + '_' + str(checkpoint_number) \
@@ -150,27 +149,29 @@ def driving_benchmark(checkpoint_number, gpu, town_name, experiment_set, exp_bat
         exit(1)
 
 
-def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
+def execute(gpu, exp_folder, exp_alias, drive_conditions, suppress_output, docker, record_collisions, no_screen):
     """
     Main loop function. Executes driving benchmarks the specified iterations.
     Args:
         gpu:
-        exp_batch:
+        exp_folder:
         exp_alias:
         drive_conditions:
-        params:
-
+        suppress_output:
+        docker:
+        record_collisions:
+        no_screen:
     Returns:
 
     """
 
     try:
-        print("Running ", __file__, " On GPU ", gpu, "of experiment name ", exp_alias)
+        print(f"Running {__file__} on GPU {gpu[0]} of experiment name {exp_alias}")
         os.environ["CUDA_VISIBLE_DEVICES"] = gpu
         if not os.path.exists('_output_logs'):
             os.mkdir('_output_logs')
 
-        merge_with_yaml(os.path.join('configs', exp_batch, f'{exp_alias}.yaml'))
+        merge_with_yaml(os.path.join('configs', exp_folder, f'{exp_alias}.yaml'))
 
         exp_set_name, town_name = drive_conditions.split('_')
 
@@ -183,7 +184,7 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
 
         set_type_of_process('drive', drive_conditions)
 
-        if params['suppress_output']:
+        if suppress_output:
             sys.stdout = open(os.path.join('_output_logs',
                               g_conf.PROCESS_NAME + '_' + str(os.getpid()) + ".out"),
                               "a", buffering=1)
@@ -212,7 +213,7 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
         if latest is None:  # When nothing was tested, get latest returns none, we fix that.
             latest = 0
             # The used tasks are hardcoded, this need to be improved
-            file_base = os.path.join('_logs', exp_batch, exp_alias,
+            file_base = os.path.join('_logs', exp_folder, exp_alias,
                                      g_conf.PROCESS_NAME + '_csv', control_filename)
 
             for i in range(len(task_list)):
@@ -232,8 +233,8 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
                 time.sleep(0.1)
 
             validation_state_iteration = validation_stale_point(g_conf.FINISH_ON_VALIDATION_STALE)
-            driving_benchmark(validation_state_iteration, gpu, town_name, experiment_set, exp_batch,
-                              exp_alias, params, control_filename, task_list)
+            driving_benchmark(validation_state_iteration, gpu, town_name, experiment_set, exp_folder,
+                              exp_alias, docker, control_filename, task_list)
 
         else:
             """
@@ -250,8 +251,8 @@ def execute(gpu, exp_batch, exp_alias, drive_conditions, params):
                     latest = get_next_checkpoint(g_conf.TEST_SCHEDULE,
                                                  control_filename + '_' + task_list[0])
 
-                    driving_benchmark(latest, gpu, town_name, experiment_set, exp_batch,
-                                      exp_alias, params, control_filename, task_list)
+                    driving_benchmark(latest, gpu, town_name, experiment_set, exp_folder,
+                                      exp_alias, docker, control_filename, task_list)
 
                 else:
                     time.sleep(0.1)

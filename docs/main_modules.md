@@ -5,26 +5,26 @@ Core Modules
 There are three kinds of process that are executed on
 COiLTRAiNE.
 
-### Train
+## Train
 
 Trains a controller model given a configuration file.
 The training process produces checkpoints with respect to
 the SAVE_SCHEDULE attribute. These checkpoints are used
 to evaluate the model on a dataset or in some driving benchmark.
-
 The training produces logs to be printed on the screen and
 also tensorboard logs.
 
 To configure the training you can adjust [model configurations](docs/network.md),
 such as network architecture and loss function and also the
- [input data](docs/input.md) format and distribuction.
+ [input data](docs/input.md) format and distribution.
 
-To run a single experiment, we use the flag single-process train
-and the experiment name.
+To run a single experiment, we use the flag `train`, the folder where the configuration is,  
+and the experiment name. For example, to train the [`configs/sample/coil_icra.yaml`](configs/sample/coil_icra.yaml) 
+model, using GPU 0, run:
 
-To train the [configs/sample/icra_model.yaml](configs/sample/coil_icra.yaml) model, using the GPU 0, run:
-
-    python3 coiltraine.py --single-process train -e coil_icra --folder sample --gpus 0
+```commandline
+python3 coiltraine.py train --folder sample --exp coil_icra --gpus 0
+```
 
 To train all the models specified on the sample folder:
 
@@ -51,20 +51,22 @@ as the checkpoint for testing drive.
 
 
 
-### Validation
+## Validation
 
 The validation module produces one output for each of the data
 inputs from a some validation dataset. This is stored inside csv
 files located at _logs/[<exp_batches>/<exp_alias>](docs/configuration.md/#files/batches)
 /<validation_dataset_name>_csv.
 
-To run the validation for the  as a single process, configs/sample/icra_model.yaml,
- with a certain validation dataset name:
+To run the validation for the  as a single process, `configs/sample/icra_model.yaml`,
+ with a certain validation dataset name defined therein:
 
-    python3 coiltraine.py --single-process validation -e coil_icra --folder sample --gpus 0 -vd <validation_dataset>
+```commandline
+python3 coiltraine.py validate --folder sample --exp coil_icra --gpus 0
+```
 
-Note that the <validation_dataset> must be inside the folder defined
- in the COIL_DATASET_PATH env variable. To perform validation on
+Note that the validation dataset must be inside the folder defined
+ in the `COIL_DATASET_PATH` env variable. To perform validation on
  the two sample validation datasets:
 
      python3 coiltraine.py --single-process validation -e coil_icra --folder sample --gpus 0 -vd CoILVal1 CoILVal2
@@ -77,7 +79,7 @@ Note that the <validation_dataset> must be inside the folder defined
 
 
 
-### Drive
+## Drive
 
 The driving process is executed over the run_drive.py script.
 A different process is executed for every driving environment that

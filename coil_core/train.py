@@ -16,7 +16,7 @@ from coilutils.general import format_time, save_output
 
 
 # The main function maybe we could call it with a default name
-def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=12):
+def execute(gpu, exp_folder, exp_alias, suppress_output=False, number_of_workers=12):
     """
         The main training function. This functions loads the latest checkpoint
         for a given, exp_batch (folder) and exp_alias (experiment configuration).
@@ -37,7 +37,7 @@ def execute(gpu, exp_folder, exp_alias, suppress_output=True, number_of_workers=
         g_conf.VARIABLE_WEIGHT = {}
         # At this point the log file with the correct naming is created.
         # You merge the yaml file with the global configuration structure.
-        merge_with_yaml(os.path.join('configs', exp_folder, exp_alias + '.yaml'))
+        merge_with_yaml(os.path.join('configs', exp_folder, f'{exp_alias}.yaml'))
         set_type_of_process('train')
         # Set the process into loading status.
         coil_logger.add_message('Loading', {'GPU': os.environ['CUDA_VISIBLE_DEVICES']})
